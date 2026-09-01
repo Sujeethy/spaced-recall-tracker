@@ -1,0 +1,400 @@
+import type {
+  Topic,
+  Category,
+  Tag,
+  TopicTag,
+  RecallSession,
+  Settings,
+  TopicWithDetails,
+  TopicFormValues
+} from '../types'
+import { localDb } from './localDb'
+import { getSupabaseClient } from './supabase'
+import {
+  generateRecallSessions,
+  evaluateRecallStatus,
+  getTodayDateString,
+} from '../services/spacedRecall'
+import type { BackupData } from '../services/exportImport'
+
+/**
+ * Unified API repository layer.
+ * Seamlessly interfaces with Supabase when configured, or localDb when offline/local-first.
+ */
+export const api = {
+  // -------------------------------------------------------------
+  // Topics
+  // -------------------------------------------------------------
+  async getTopics(): Promise<TopicWithDetails[]> {
+    const supabase = getSupabaseClient()
+    if (supabase) {
+      try {
+        const { data: topicsData, error } = await supabase
+          .from('topics')
+          .select('*, categories(*), topic_tags(*, tags(*)), recall_sessions(*)')
+          .eq('archived', false)
+          .order('learned_at', { ascending: false })
+
+        if (!error && topicsData) {
+          return topicsData.map(formatSupabaseTopic)
+        }
+      } catch (err) {
+        console.warn('Supabase query failed, falling back to localDb:', err)
+      }
+    }
+
+    // Local DB fallback
+    const topics = localDb.getTopics().filter(t => !t.archived)
+    const categories = localDb.getCategories()
+    const tags = localDb.getTags()
+    const topicTags = localDb.getTopicTags()
+    const sessions = localDb.getSessions()
+
+    return topics.map(t => enrichTopic(t, categories, tags, topicTags, sessions))
+  },
+
+  async getTopicById(id: string): Promise<TopicWithDetails | null> {
+    const topics = await this.getTopics()
+    return topics.find(t => t.id === id) || null
+  },
+
+  async createTopic(values: TopicFormValues, customIntervals?: number[]): Promise<TopicWithDetails> {
+    const today = getTodayDateString()
+    const nowIso = new Date().toISOString()
+    const topicId = crypto.randomUUID()
+
+    const newTopic: Topic = {
+      id: topicId,
+      title: values.title.trim(),
+      description: values.description?.trim() || '',
+      notes: values.notes?.trim() || '',
+      learnedAt: values.learnedAt || today,
+      categoryId: values.categoryId,
+      difficulty: values.difficulty || 'medium',
+      chatgptUrl: values.chatgptUrl?.trim() || '',
+      questions: values.questions || [],
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      archived: false,
+    }
+
+    const settings = await this.getSettings()
+    const intervals = customIntervals || settings.recallIntervals
+    const generatedSessions = generateRecallSessions(topicId, newTopic.learnedAt, intervals, today)
+
+    // Handle tag parsing
+    const tagNames = (values.tags || '')
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
+
+    const allTags = localDb.getTags()
+    const newTopicTags: TopicTag[] = []
+
+    for (const tagName of tagNames) {
+      let existingTag = allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase())
+      if (!existingTag) {
+        existingTag = { id: crypto.randomUUID(), name: tagName }
+        allTags.push(existingTag)
+      }
+      newTopicTags.push({ topicId, tagId: existingTag.id })
+    }
+
+    localDb.saveTags(allTags)
+    const currentTopicTags = localDb.getTopicTags()
+    localDb.saveTopicTags([...currentTopicTags, ...newTopicTags])
+
+    const currentTopics = localDb.getTopics()
+    localDb.saveTopics([newTopic, ...currentTopics])
+
+    const currentSessions = localDb.getSessions()
+    localDb.saveSessions([...currentSessions, ...generatedSessions])
+
+    return (await this.getTopicById(topicId))!
+  },
+
+  async updateTopic(id: string, values: Partial<TopicFormValues>): Promise<TopicWithDetails> {
+    const topics = localDb.getTopics()
+    const idx = topics.findIndex(t => t.id === id)
+    if (idx === -1) throw new Error(`Topic not found: ${id}`)
+
+    const current = topics[idx]
+    const updated: Topic = {
+      ...current,
+      title: values.title !== undefined ? values.title.trim() : current.title,
+      description: values.description !== undefined ? values.description : current.description,
+      notes: values.notes !== undefined ? values.notes : current.notes,
+      learnedAt: values.learnedAt !== undefined ? values.learnedAt : current.learnedAt,
+      categoryId: values.categoryId !== undefined ? values.categoryId : current.categoryId,
+      difficulty: values.difficulty !== undefined ? values.difficulty : current.difficulty,
+      chatgptUrl: values.chatgptUrl !== undefined ? values.chatgptUrl : current.chatgptUrl,
+      questions: values.questions !== undefined ? values.questions : current.questions,
+      updatedAt: new Date().toISOString(),
+    }
+
+    topics[idx] = updated
+    localDb.saveTopics(topics)
+
+    // Update tags if provided
+    if (values.tags !== undefined) {
+      const tagNames = values.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const allTags = localDb.getTags()
+      const newTopicTags: TopicTag[] = []
+
+      for (const tagName of tagNames) {
+        let tag = allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase())
+        if (!tag) {
+          tag = { id: crypto.randomUUID(), name: tagName }
+          allTags.push(tag)
+        }
+        newTopicTags.push({ topicId: id, tagId: tag.id })
+      }
+
+      localDb.saveTags(allTags)
+      const remainingTopicTags = localDb.getTopicTags().filter(tt => tt.topicId !== id)
+      localDb.saveTopicTags([...remainingTopicTags, ...newTopicTags])
+    }
+
+    return (await this.getTopicById(id))!
+  },
+
+  async deleteTopic(id: string): Promise<void> {
+    const topics = localDb.getTopics().filter(t => t.id !== id)
+    localDb.saveTopics(topics)
+
+    const sessions = localDb.getSessions().filter(s => s.topicId !== id)
+    localDb.saveSessions(sessions)
+
+    const topicTags = localDb.getTopicTags().filter(tt => tt.topicId !== id)
+    localDb.saveTopicTags(topicTags)
+  },
+
+  // -------------------------------------------------------------
+  // Recall Sessions
+  // -------------------------------------------------------------
+  async getRecallSessions(): Promise<RecallSession[]> {
+    return localDb.getSessions()
+  },
+
+  async completeRecallSession(sessionId: string, notes?: string): Promise<RecallSession> {
+    const sessions = localDb.getSessions()
+    const session = sessions.find(s => s.id === sessionId)
+    if (!session) throw new Error(`Session ${sessionId} not found`)
+
+    const nowIso = new Date().toISOString()
+    session.completedAt = nowIso
+    session.status = 'completed'
+    if (notes !== undefined) session.notes = notes
+    session.updatedAt = nowIso
+
+    localDb.saveSessions(sessions)
+    return session
+  },
+
+  async uncompleteRecallSession(sessionId: string): Promise<RecallSession> {
+    const sessions = localDb.getSessions()
+    const session = sessions.find(s => s.id === sessionId)
+    if (!session) throw new Error(`Session ${sessionId} not found`)
+
+    session.completedAt = null
+    session.status = evaluateRecallStatus(session.scheduledDate, null, 'upcoming')
+    session.updatedAt = new Date().toISOString()
+
+    localDb.saveSessions(sessions)
+    return session
+  },
+
+  async rescheduleRecallSession(sessionId: string, newDate: string): Promise<RecallSession> {
+    const sessions = localDb.getSessions()
+    const session = sessions.find(s => s.id === sessionId)
+    if (!session) throw new Error(`Session ${sessionId} not found`)
+
+    session.rescheduledFrom = session.scheduledDate
+    session.scheduledDate = newDate
+    session.completedAt = null
+    session.status = evaluateRecallStatus(newDate, null, 'rescheduled')
+    session.updatedAt = new Date().toISOString()
+
+    localDb.saveSessions(sessions)
+    return session
+  },
+
+  async skipRecallSession(sessionId: string): Promise<RecallSession> {
+    const sessions = localDb.getSessions()
+    const session = sessions.find(s => s.id === sessionId)
+    if (!session) throw new Error(`Session ${sessionId} not found`)
+
+    session.status = 'skipped'
+    session.updatedAt = new Date().toISOString()
+
+    localDb.saveSessions(sessions)
+    return session
+  },
+
+  // -------------------------------------------------------------
+  // Categories & Tags
+  // -------------------------------------------------------------
+  async getCategories(): Promise<Category[]> {
+    return localDb.getCategories().sort((a, b) => a.order - b.order)
+  },
+
+  async createCategory(name: string, color: string = '#6366f1'): Promise<Category> {
+    const categories = localDb.getCategories()
+    const newCategory: Category = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      color,
+      order: categories.length + 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    localDb.saveCategories([...categories, newCategory])
+    return newCategory
+  },
+
+  async deleteCategory(id: string): Promise<void> {
+    const categories = localDb.getCategories().filter(c => c.id !== id)
+    localDb.saveCategories(categories)
+  },
+
+  async getTags(): Promise<Tag[]> {
+    return localDb.getTags()
+  },
+
+  // -------------------------------------------------------------
+  // Settings
+  // -------------------------------------------------------------
+  async getSettings(): Promise<Settings> {
+    return localDb.getSettings()
+  },
+
+  async updateSettings(updates: Partial<Settings>): Promise<Settings> {
+    const current = localDb.getSettings()
+    const updated = { ...current, ...updates }
+    localDb.saveSettings(updated)
+    return updated
+  },
+
+  // -------------------------------------------------------------
+  // Backup & Restore
+  // -------------------------------------------------------------
+  async exportBackup(): Promise<BackupData> {
+    return {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      topics: localDb.getTopics(),
+      categories: localDb.getCategories(),
+      tags: localDb.getTags(),
+      topicTags: localDb.getTopicTags(),
+      recallSessions: localDb.getSessions(),
+      settings: localDb.getSettings(),
+    }
+  },
+
+  async restoreBackup(backup: BackupData, mode: 'replace' | 'merge'): Promise<void> {
+    if (mode === 'replace') {
+      localDb.saveTopics(backup.topics)
+      localDb.saveCategories(backup.categories)
+      localDb.saveTags(backup.tags || [])
+      localDb.saveTopicTags(backup.topicTags || [])
+      localDb.saveSessions(backup.recallSessions)
+      if (backup.settings) localDb.saveSettings(backup.settings)
+    } else {
+      // Merge mode
+      const curTopics = localDb.getTopics()
+      const curCategories = localDb.getCategories()
+      const curTags = localDb.getTags()
+      const curSessions = localDb.getSessions()
+
+      const topicMap = new Map(curTopics.map(t => [t.id, t]))
+      backup.topics.forEach(t => topicMap.set(t.id, t))
+
+      const catMap = new Map(curCategories.map(c => [c.id, c]))
+      backup.categories.forEach(c => catMap.set(c.id, c))
+
+      const tagMap = new Map(curTags.map(t => [t.id, t]))
+      ;(backup.tags || []).forEach(t => tagMap.set(t.id, t))
+
+      const sessionMap = new Map(curSessions.map(s => [s.id, s]))
+      backup.recallSessions.forEach(s => sessionMap.set(s.id, s))
+
+      localDb.saveTopics(Array.from(topicMap.values()))
+      localDb.saveCategories(Array.from(catMap.values()))
+      localDb.saveTags(Array.from(tagMap.values()))
+      localDb.saveSessions(Array.from(sessionMap.values()))
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// Helper enrichment functions
+// -------------------------------------------------------------
+function enrichTopic(
+  topic: Topic,
+  categories: Category[],
+  tags: Tag[],
+  topicTags: TopicTag[],
+  sessions: RecallSession[]
+): TopicWithDetails {
+  const category = categories.find(c => c.id === topic.categoryId)
+  const matchingTagIds = topicTags.filter(tt => tt.topicId === topic.id).map(tt => tt.tagId)
+  const matchingTags = tags.filter(t => matchingTagIds.includes(t.id))
+  const topicSessions = sessions
+    .filter(s => s.topicId === topic.id)
+    .sort((a, b) => a.recallIndex - b.recallIndex)
+
+  const completedCount = topicSessions.filter(s => s.status === 'completed').length
+  const nextSession = topicSessions.find(s => s.status === 'due' || s.status === 'overdue' || s.status === 'upcoming')
+
+  return {
+    ...topic,
+    category,
+    tags: matchingTags,
+    recallSessions: topicSessions,
+    nextRecallDate: nextSession ? nextSession.scheduledDate : null,
+    completedRecallCount: completedCount,
+    totalRecallCount: topicSessions.length,
+  }
+}
+
+function formatSupabaseTopic(raw: any): TopicWithDetails {
+  const category = raw.categories
+  const tags = (raw.topic_tags || []).map((tt: any) => tt.tags).filter(Boolean)
+  const recallSessions: RecallSession[] = (raw.recall_sessions || []).map((s: any) => ({
+    id: s.id,
+    topicId: s.topic_id,
+    intervalDays: s.interval_days,
+    recallIndex: s.recall_index,
+    scheduledDate: s.scheduled_date,
+    completedAt: s.completed_at,
+    status: s.status,
+    rescheduledFrom: s.rescheduled_from,
+    notes: s.notes,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+  }))
+
+  const completedCount = recallSessions.filter(s => s.status === 'completed').length
+  const nextSession = recallSessions.find(s => s.status === 'due' || s.status === 'overdue' || s.status === 'upcoming')
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    description: raw.description,
+    notes: raw.notes,
+    learnedAt: raw.learned_at,
+    categoryId: raw.category_id,
+    difficulty: raw.difficulty,
+    chatgptUrl: raw.chatgpt_url,
+    questions: raw.questions || [],
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+    archived: raw.archived,
+    category,
+    tags,
+    recallSessions,
+    nextRecallDate: nextSession ? nextSession.scheduledDate : null,
+    completedRecallCount: completedCount,
+    totalRecallCount: recallSessions.length,
+  }
+}
