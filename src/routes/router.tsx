@@ -2,6 +2,7 @@ import {
   createRouter,
   createRoute,
   createRootRoute,
+  createHashHistory,
 } from '@tanstack/react-router'
 import { AppLayout } from '../components/layout/AppLayout'
 import { DashboardView } from '../components/dashboard/DashboardView'
@@ -88,8 +89,11 @@ const routeTree = rootRoute.addChildren([
 ])
 
 // 4. Create router
+const hashHistory = createHashHistory()
+
 export const router = createRouter({
   routeTree,
+  history: hashHistory,
   defaultPreload: 'intent',
 })
 
