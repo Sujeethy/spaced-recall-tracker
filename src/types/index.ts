@@ -42,7 +42,9 @@ export interface Topic {
   title: string
   description?: string
   notes?: string
-  markdownNotes?: string
+  markdownNotes?: string // Full Topic / Comprehensive Study Notes
+  definitions?: string // Definitions & Key Terminology in Markdown
+  questionsMarkdown?: string // Questions & Interview Prompts in Markdown
   status: TopicStatus
   completedAt?: string | null
   learnedAt?: string | null // Optional legacy/planned date
@@ -137,6 +139,8 @@ export const topicFormSchema = z.object({
   description: z.string().optional(),
   notes: z.string().optional(),
   markdownNotes: z.string().optional(),
+  definitions: z.string().optional(),
+  questionsMarkdown: z.string().optional(),
   tags: z.string().optional(), // comma-separated
   questions: z.array(
     z.object({

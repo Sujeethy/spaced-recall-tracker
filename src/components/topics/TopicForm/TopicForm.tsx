@@ -9,7 +9,16 @@ import { useCourses } from '../../../hooks/useCourses'
 import { SchedulePreviewTable } from './SchedulePreviewTable'
 import { QuestionBuilder } from './QuestionBuilder'
 import { MarkdownEditor } from '../../common/MarkdownEditor'
-import { Plus, Tag as TagIcon, ExternalLink, GraduationCap, BookOpen, CheckCircle2 } from 'lucide-react'
+import {
+  Plus,
+  Tag as TagIcon,
+  ExternalLink,
+  GraduationCap,
+  CheckCircle2,
+  HelpCircle,
+  FileText,
+  Bookmark,
+} from 'lucide-react'
 
 interface TopicFormProps {
   initialData?: TopicWithDetails
@@ -45,6 +54,7 @@ export function TopicForm({
 
   const [newCatName, setNewCatName] = useState('')
   const [showNewCatInput, setShowNewCatInput] = useState(false)
+  const [activeNotesTab, setActiveNotesTab] = useState<'full' | 'definitions' | 'questions'>('full')
 
   const form = useForm<TopicFormValues>({
     resolver: zodResolver(topicFormSchema),
@@ -61,6 +71,8 @@ export function TopicForm({
       description: initialData?.description || '',
       notes: initialData?.notes || '',
       markdownNotes: initialData?.markdownNotes || '',
+      definitions: initialData?.definitions || '',
+      questionsMarkdown: initialData?.questionsMarkdown || '',
       tags: initialData?.tags?.map((t) => t.name).join(', ') || '',
       questions: initialData?.questions || [],
     },
@@ -78,6 +90,8 @@ export function TopicForm({
   const watchedCompletedAt = watch('completedAt')
   const watchedDifficulty = watch('difficulty')
   const watchedMarkdown = watch('markdownNotes') || ''
+  const watchedDefinitions = watch('definitions') || ''
+  const watchedQuestionsMarkdown = watch('questionsMarkdown') || ''
 
   // If status transitions to completed, default completedAt to today if unset
   useEffect(() => {
@@ -109,35 +123,43 @@ export function TopicForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="border-b pb-3">
+        <h2 className="text-base font-bold text-foreground">
+          {initialData ? 'Edit Topic' : 'Add New Topic'}
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Define topic details, rich markdown study notes, definitions, and interview questions.
+        </p>
+      </div>
+
       {/* Title */}
       <div>
         <label className="text-xs font-semibold text-foreground block mb-1">
-          Topic Title <span className="text-rose-500">*</span>
+          Topic Title *
         </label>
         <input
           {...register('title')}
-          placeholder="e.g. Execution Context & Memory: Call Stack, Heap"
-          className="w-full px-3.5 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          placeholder="e.g. Execution Context & Call Stack"
+          className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
         {errors.title && (
-          <p className="text-[11px] text-rose-500 mt-1">{errors.title.message}</p>
+          <p className="text-xs text-destructive mt-1">{errors.title.message}</p>
         )}
       </div>
 
-      {/* Row: Course Assignment + Category */}
+      {/* Course & Category */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Course Selection */}
         <div>
           <label className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
             <GraduationCap className="w-3.5 h-3.5 text-primary" />
-            <span>Course / Domain Track</span>
+            <span>Belongs to Course (Curriculum)</span>
           </label>
           <select
             {...register('courseId')}
             className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            <option value="">Standalone (No Course)</option>
+            <option value="">No Course (Standalone Topic)</option>
             {courses.map((course) => (
               <option key={course.id} value={course.id}>
                 {course.title}
@@ -146,16 +168,17 @@ export function TopicForm({
           </select>
         </div>
 
-        {/* Category Selection */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-foreground">Category</label>
+            <label className="text-xs font-semibold text-foreground">
+              Category *
+            </label>
             <button
               type="button"
               onClick={() => setShowNewCatInput(!showNewCatInput)}
-              className="text-[11px] text-primary hover:underline font-medium flex items-center gap-0.5"
+              className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
             >
-              <Plus className="w-3 h-3" /> {showNewCatInput ? 'Cancel' : 'New'}
+              <Plus className="w-3 h-3" /> New Category
             </button>
           </div>
 
@@ -165,12 +188,12 @@ export function TopicForm({
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
                 placeholder="Category name"
-                className="w-full px-3 py-1.5 text-xs border rounded-lg bg-background"
+                className="flex-1 px-3 py-2 text-xs border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <button
                 type="button"
                 onClick={handleCreateCategory}
-                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium"
+                className="px-3 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-xl hover:bg-primary/90"
               >
                 Add
               </button>
@@ -285,18 +308,99 @@ export function TopicForm({
         </div>
       </div>
 
-      {/* Comprehensive Study Notes (Markdown) */}
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-          <BookOpen className="w-3.5 h-3.5 text-primary" />
-          <span>Comprehensive Study Notes & Explanations (Markdown)</span>
-        </label>
-        <MarkdownEditor
-          value={watchedMarkdown}
-          onChange={(val) => setValue('markdownNotes', val, { shouldDirty: true })}
-          placeholder="Write your study notes, code examples, interview takeaways, architecture explanations in Markdown..."
-          rows={8}
-        />
+      {/* 3 Markdown Study Sections: Full Topic, Definitions, Questions */}
+      <div className="space-y-3 p-4 rounded-2xl border bg-card/60">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2.5">
+          <span className="text-xs font-bold text-foreground">
+            Markdown Study & Recall Content
+          </span>
+          {/* Section Switcher Tabs */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60">
+            <button
+              type="button"
+              onClick={() => setActiveNotesTab('full')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                activeNotesTab === 'full'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-primary" />
+              Full Topic Notes
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveNotesTab('definitions')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                activeNotesTab === 'definitions'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5 text-amber-500" />
+              Definitions
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveNotesTab('questions')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                activeNotesTab === 'questions'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-blue-500" />
+              Questions
+            </button>
+          </div>
+        </div>
+
+        {/* Tab 1: Full Topic Notes */}
+        {activeNotesTab === 'full' && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Comprehensive explanations, architecture diagrams, code blocks & deep dives</span>
+            </div>
+            <MarkdownEditor
+              value={watchedMarkdown}
+              onChange={(val) => setValue('markdownNotes', val, { shouldDirty: true })}
+              placeholder="Write comprehensive topic notes, deep dive explanations, code examples..."
+              rows={8}
+            />
+          </div>
+        )}
+
+        {/* Tab 2: Definitions */}
+        {activeNotesTab === 'definitions' && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Core terms, glossaries, one-liners, and crucial technical definitions</span>
+            </div>
+            <MarkdownEditor
+              value={watchedDefinitions}
+              onChange={(val) => setValue('definitions', val, { shouldDirty: true })}
+              placeholder="### Key Terminology & Definitions&#10;&#10;- **Term 1**: Definition...&#10;- **Term 2**: Definition..."
+              rows={8}
+            />
+          </div>
+        )}
+
+        {/* Tab 3: Questions */}
+        {activeNotesTab === 'questions' && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Interview questions, edge-case challenges, code outputs & active-recall prompts</span>
+            </div>
+            <MarkdownEditor
+              value={watchedQuestionsMarkdown}
+              onChange={(val) => setValue('questionsMarkdown', val, { shouldDirty: true })}
+              placeholder="### Top Interview Questions&#10;&#10;1. **Question**: ...&#10;   - *Answer/Explanation*: ...&#10;2. **What is the output of this code?**&#10;   ```js&#10;   console.log(...);&#10;   ```"
+              rows={8}
+            />
+          </div>
+        )}
       </div>
 
       {/* Tags */}
@@ -312,7 +416,7 @@ export function TopicForm({
         />
       </div>
 
-      {/* Active Recall Question Builder */}
+      {/* Active Recall Flashcard Question Builder */}
       <QuestionBuilder form={form} fieldArray={fieldArray} />
 
       {/* Live Spaced Recall Schedule Preview (Only when completed) */}

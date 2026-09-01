@@ -16,6 +16,8 @@ import {
   GraduationCap,
   FileText,
   Clock,
+  Bookmark,
+  HelpCircle,
 } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { TopicForm } from '../TopicForm/TopicForm'
@@ -210,6 +212,19 @@ export function TopicDetailView() {
         </div>
       </div>
 
+      {/* Key Definitions (Markdown) */}
+      {topic.definitions && (
+        <div className="p-6 rounded-2xl border border-amber-500/25 bg-amber-500/5 space-y-3 shadow-sm">
+          <div className="flex items-center gap-2 pb-2 border-b border-amber-500/20">
+            <Bookmark className="w-4 h-4 text-amber-500" />
+            <h2 className="text-sm font-bold text-amber-700 dark:text-amber-300">
+              Key Definitions & Core Terminology
+            </h2>
+          </div>
+          <MarkdownRenderer content={topic.definitions} />
+        </div>
+      )}
+
       {/* Comprehensive Study Notes (Markdown) */}
       {topic.markdownNotes && (
         <div className="p-6 rounded-2xl border bg-card/60 space-y-3 shadow-sm">
@@ -223,13 +238,16 @@ export function TopicDetailView() {
         </div>
       )}
 
-      {/* Basic Key Takeaways Notes (if separate from Markdown) */}
-      {topic.notes && !topic.markdownNotes && (
-        <div className="p-5 rounded-2xl border bg-muted/40 space-y-2">
-          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Key Concepts & Notes
+      {/* Interview Questions & Problem Prompts (Markdown) */}
+      {topic.questionsMarkdown && (
+        <div className="p-6 rounded-2xl border border-blue-500/25 bg-blue-500/5 space-y-3 shadow-sm">
+          <div className="flex items-center gap-2 pb-2 border-b border-blue-500/20">
+            <HelpCircle className="w-4 h-4 text-blue-500" />
+            <h2 className="text-sm font-bold text-blue-700 dark:text-blue-300">
+              Interview Questions & Active-Recall Prompts
+            </h2>
           </div>
-          <p className="text-xs sm:text-sm text-foreground whitespace-pre-wrap">{topic.notes}</p>
+          <MarkdownRenderer content={topic.questionsMarkdown} />
         </div>
       )}
 
