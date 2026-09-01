@@ -17,6 +17,17 @@ export function RecallHistoryTable({ sessions, topicTitle }: RecallHistoryTableP
 
   const [rescheduleSession, setRescheduleSession] = useState<RecallSession | null>(null)
 
+  if (sessions.length === 0) {
+    return (
+      <div className="p-6 rounded-xl border border-dashed text-center bg-muted/20 space-y-1.5">
+        <p className="text-xs font-semibold text-foreground">No Spaced-Recall Sessions Active</p>
+        <p className="text-[11px] text-muted-foreground max-w-md mx-auto">
+          Spaced-repetition review sessions (Day 1, 3, 5, 9, 15...) will automatically start on the day you mark this topic as <strong>Completed</strong>.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto border rounded-xl bg-card">

@@ -1,5 +1,5 @@
 import type { Topic, Category, Course, Tag, TopicTag, RecallSession, Settings } from '../types'
-import { generateRecallSessions, getTodayDateString } from '../services/spacedRecall'
+import { getTodayDateString } from '../services/spacedRecall'
 
 const today = getTodayDateString()
 const nowIso = new Date().toISOString()
@@ -882,9 +882,7 @@ export const SEED_TOPIC_TAGS: TopicTag[] = [
   { topicId: 'd5-t1', tagId: 'tag-machine-coding' },
 ]
 
-export const SEED_SESSIONS: RecallSession[] = SEED_TOPICS.flatMap((topic) =>
-  generateRecallSessions(topic.id, topic.learnedAt, [0, 1, 3, 5, 9, 15, 25, 40, 60, 90, 120, 180, 365], today)
-)
+export const SEED_SESSIONS: RecallSession[] = []
 
 export const SEED_SETTINGS: Settings = {
   recallIntervals: [0, 1, 3, 5, 9, 15, 25, 40, 60, 90, 120, 180, 365],

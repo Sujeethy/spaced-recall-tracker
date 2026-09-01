@@ -35,7 +35,9 @@ export function TopicsListView() {
     })
     .sort((a, b) => {
       if (sortBy === 'learnedAt') {
-        return b.learnedAt.localeCompare(a.learnedAt)
+        const dateB = b.completedAt || b.learnedAt || b.createdAt || ''
+        const dateA = a.completedAt || a.learnedAt || a.createdAt || ''
+        return dateB.localeCompare(dateA)
       }
       if (sortBy === 'title') {
         return a.title.localeCompare(b.title)

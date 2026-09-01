@@ -45,7 +45,7 @@ export interface Topic {
   markdownNotes?: string
   status: TopicStatus
   completedAt?: string | null
-  learnedAt: string // Format: YYYY-MM-DD
+  learnedAt?: string | null // Optional legacy/planned date
   categoryId: string
   difficulty: TopicDifficulty
   chatgptUrl?: string
@@ -130,7 +130,7 @@ export const topicFormSchema = z.object({
   orderIndex: z.number().optional().default(0),
   status: z.enum(['yet_to_start', 'in_progress', 'completed', 'draft', 'skipped']).default('yet_to_start'),
   completedAt: z.string().nullable().optional(),
-  learnedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid date YYYY-MM-DD is required'),
+  learnedAt: z.string().optional(),
   categoryId: z.string().min(1, 'Please select or create a category'),
   difficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
   chatgptUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),

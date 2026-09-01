@@ -10,10 +10,13 @@ import {
   Edit2,
   Trash2,
   Calendar,
+  CheckCircle,
+  Circle,
 } from 'lucide-react'
 import { useUIStore } from '../../../store/useUIStore'
 import { ConfirmDialog } from '../../common/ConfirmDialog'
-import { useDeleteTopic } from '../../../hooks/useTopics'
+import { useDeleteTopic, useUpdateTopic } from '../../../hooks/useTopics'
+import { getTodayDateString } from '../../../services/spacedRecall'
 
 interface TopicOrderRowProps {
   topic: TopicWithDetails
@@ -34,18 +37,34 @@ export function TopicOrderRow({
 }: TopicOrderRowProps) {
   const openQuiz = useUIStore((s) => s.openQuiz)
   const deleteMutation = useDeleteTopic()
+  const updateMutation = useUpdateTopic()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
+  const isCompleted = topic.status === 'completed'
   const percent =
     topic.totalRecallCount === 0
       ? 0
       : Math.round((topic.completedRecallCount / topic.totalRecallCount) * 100)
 
+  const handleToggleCompleted = () => {
+    if (isCompleted) {
+      updateMutation.mutate({
+        id: topic.id,
+        values: { status: 'yet_to_start', completedAt: null },
+      })
+    } else {
+      updateMutation.mutate({
+        id: topic.id,
+        values: { status: 'completed', completedAt: getTodayDateString() },
+      })
+    }
+  }
+
   return (
     <>
       <div className="p-3.5 sm:p-4 rounded-xl border bg-card hover:border-primary/40 transition-all flex items-center justify-between gap-3 shadow-xs">
-        {/* Order Reorder Controls & Index */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Order Reorder Controls, Index & Checkbox */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <div className="flex flex-col items-center">
             <button
               type="button"
@@ -67,9 +86,26 @@ export function TopicOrderRow({
             </button>
           </div>
 
-          <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center font-mono font-bold text-xs text-foreground">
+          <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center font-mono font-bold text-xs text-muted-foreground">
             {index + 1}
           </div>
+
+          <button
+            type="button"
+            onClick={handleToggleCompleted}
+            className={`p-1 rounded-lg transition-colors ${
+              isCompleted
+                ? 'text-emerald-500 hover:text-emerald-600'
+                : 'text-muted-foreground/50 hover:text-foreground'
+            }`}
+            title={isCompleted ? 'Marked Completed (Click to undo)' : 'Click to Mark Completed'}
+          >
+            {isCompleted ? (
+              <CheckCircle className="w-5 h-5 fill-emerald-500/20" />
+            ) : (
+              <Circle className="w-5 h-5" />
+            )}
+          </button>
         </div>
 
         {/* Topic Title & Meta */}
@@ -78,7 +114,9 @@ export function TopicOrderRow({
             <Link
               to="/topics/$topicId"
               params={{ topicId: topic.id }}
-              className="font-bold text-xs sm:text-sm text-foreground hover:text-primary transition-colors block truncate"
+              className={`font-bold text-xs sm:text-sm transition-colors block truncate ${
+                isCompleted ? 'text-foreground hover:text-primary' : 'text-foreground hover:text-primary'
+              }`}
             >
               {topic.title}
             </Link>
@@ -87,13 +125,21 @@ export function TopicOrderRow({
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              <span>Next: {topic.nextRecallDate || 'Done'}</span>
-            </span>
-            <span>
-              {topic.completedRecallCount}/{topic.totalRecallCount} recalls ({percent}%)
-            </span>
+            {isCompleted ? (
+              <>
+                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                  <Calendar className="w-3 h-3" />
+                  <span>Next: {topic.nextRecallDate || 'All Caught Up!'}</span>
+                </span>
+                <span>
+                  {topic.completedRecallCount}/{topic.totalRecallCount} recalls ({percent}%)
+                </span>
+              </>
+            ) : (
+              <span className="italic text-muted-foreground/70">
+                Not started yet • Check the circle when studied to start spaced repetition
+              </span>
+            )}
           </div>
         </div>
 

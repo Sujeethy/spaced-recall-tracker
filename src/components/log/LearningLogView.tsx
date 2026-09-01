@@ -8,13 +8,18 @@ export function LearningLogView() {
   const { data: topics = [], isLoading } = useTopics()
   const openQuickAdd = useUIStore((s) => s.openQuickAdd)
 
-  // Sort by learnedAt descending
-  const sortedTopics = [...topics].sort((a, b) => b.learnedAt.localeCompare(a.learnedAt))
+  // Sort by completedAt or learnedAt descending
+  const sortedTopics = [...topics].sort((a, b) => {
+    const dateB = b.completedAt || b.learnedAt || b.createdAt || ''
+    const dateA = a.completedAt || a.learnedAt || a.createdAt || ''
+    return dateB.localeCompare(dateA)
+  })
 
   // Group by Month Year
   const groupedByMonth: Record<string, typeof sortedTopics> = {}
   sortedTopics.forEach((t) => {
-    const date = new Date(`${t.learnedAt}T00:00:00Z`)
+    const rawDate = t.completedAt || t.learnedAt || t.createdAt.slice(0, 10)
+    const date = new Date(`${rawDate}T00:00:00Z`)
     const monthKey = new Intl.DateTimeFormat('en-US', {
       month: 'long',
       year: 'numeric',

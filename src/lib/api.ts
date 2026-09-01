@@ -9,7 +9,8 @@ import type {
   RecallSession,
   Settings,
   TopicWithDetails,
-  TopicFormValues
+  TopicFormValues,
+  TopicStatus,
 } from '../types'
 import { localDb } from './localDb'
 import { getSupabaseClient } from './supabase'
@@ -172,6 +173,8 @@ export const api = {
     const nowIso = new Date().toISOString()
     const topicId = crypto.randomUUID()
 
+    const effectiveCompletedAt = values.status === 'completed' ? (values.completedAt || today) : null
+
     const newTopic: Topic = {
       id: topicId,
       courseId: values.courseId || null,
@@ -181,7 +184,7 @@ export const api = {
       notes: values.notes?.trim() || '',
       markdownNotes: values.markdownNotes?.trim() || '',
       status: values.status || 'yet_to_start',
-      completedAt: values.completedAt || (values.status === 'completed' ? today : null),
+      completedAt: effectiveCompletedAt,
       learnedAt: values.learnedAt || today,
       categoryId: values.categoryId,
       difficulty: values.difficulty || 'medium',
@@ -192,9 +195,13 @@ export const api = {
       archived: false,
     }
 
-    const settings = await this.getSettings()
-    const intervals = customIntervals || settings.recallIntervals
-    const generatedSessions = generateRecallSessions(topicId, newTopic.learnedAt, intervals, today)
+    // Only generate spaced-recall sessions if topic is actually COMPLETED
+    let generatedSessions: RecallSession[] = []
+    if (newTopic.status === 'completed' && newTopic.completedAt) {
+      const settings = await this.getSettings()
+      const intervals = customIntervals || settings.recallIntervals
+      generatedSessions = generateRecallSessions(topicId, newTopic.completedAt, intervals, today)
+    }
 
     // Handle tag parsing
     const tagNames = (values.tags || '')
@@ -221,18 +228,30 @@ export const api = {
     const currentTopics = localDb.getTopics()
     localDb.saveTopics([newTopic, ...currentTopics])
 
-    const currentSessions = localDb.getSessions()
-    localDb.saveSessions([...currentSessions, ...generatedSessions])
+    if (generatedSessions.length > 0) {
+      const currentSessions = localDb.getSessions()
+      localDb.saveSessions([...currentSessions, ...generatedSessions])
+    }
 
     return (await this.getTopicById(topicId))!
   },
 
   async updateTopic(id: string, values: Partial<TopicFormValues>): Promise<TopicWithDetails> {
+    const today = getTodayDateString()
     const topics = localDb.getTopics()
     const idx = topics.findIndex(t => t.id === id)
     if (idx === -1) throw new Error(`Topic not found: ${id}`)
 
     const current = topics[idx]
+    const updatedStatus = values.status !== undefined ? values.status : current.status || 'yet_to_start'
+    let updatedCompletedAt = values.completedAt !== undefined ? values.completedAt : current.completedAt
+
+    if (updatedStatus === 'completed' && !updatedCompletedAt) {
+      updatedCompletedAt = today
+    } else if (updatedStatus !== 'completed') {
+      updatedCompletedAt = null
+    }
+
     const updated: Topic = {
       ...current,
       title: values.title !== undefined ? values.title.trim() : current.title,
@@ -241,8 +260,8 @@ export const api = {
       description: values.description !== undefined ? values.description : current.description,
       notes: values.notes !== undefined ? values.notes : current.notes,
       markdownNotes: values.markdownNotes !== undefined ? values.markdownNotes : current.markdownNotes,
-      status: values.status !== undefined ? values.status : current.status || 'yet_to_start',
-      completedAt: values.completedAt !== undefined ? values.completedAt : current.completedAt,
+      status: updatedStatus,
+      completedAt: updatedCompletedAt,
       learnedAt: values.learnedAt !== undefined ? values.learnedAt : current.learnedAt,
       categoryId: values.categoryId !== undefined ? values.categoryId : current.categoryId,
       difficulty: values.difficulty !== undefined ? values.difficulty : current.difficulty,
@@ -253,6 +272,25 @@ export const api = {
 
     topics[idx] = updated
     localDb.saveTopics(topics)
+
+    // Handle recall session updates based on completed status
+    const allSessions = localDb.getSessions()
+    const otherSessions = allSessions.filter(s => s.topicId !== id)
+
+    if (updated.status === 'completed' && updated.completedAt) {
+      const isStatusChanged = current.status !== 'completed'
+      const isDateChanged = current.completedAt !== updated.completedAt
+      const hasExistingSessions = allSessions.some(s => s.topicId === id)
+
+      if (isStatusChanged || isDateChanged || !hasExistingSessions) {
+        const settings = await this.getSettings()
+        const newSessions = generateRecallSessions(id, updated.completedAt, settings.recallIntervals, today)
+        localDb.saveSessions([...otherSessions, ...newSessions])
+      }
+    } else {
+      // If topic is not completed (e.g. yet_to_start, in_progress, draft), clear its active recall sessions
+      localDb.saveSessions(otherSessions)
+    }
 
     // Update tags if provided
     if (values.tags !== undefined) {
@@ -275,6 +313,13 @@ export const api = {
     }
 
     return (await this.getTopicById(id))!
+  },
+
+  async toggleTopicCompletion(id: string, newStatus: TopicStatus = 'completed', completedDate?: string): Promise<TopicWithDetails> {
+    return this.updateTopic(id, {
+      status: newStatus,
+      completedAt: newStatus === 'completed' ? (completedDate || getTodayDateString()) : null,
+    })
   },
 
   async deleteTopic(id: string): Promise<void> {
