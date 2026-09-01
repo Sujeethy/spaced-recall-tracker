@@ -41,10 +41,12 @@ export interface Topic {
   orderIndex?: number
   title: string
   description?: string
-  notes?: string
-  markdownNotes?: string // Full Topic / Comprehensive Study Notes
-  definitions?: string // Definitions & Key Terminology in Markdown
-  questionsMarkdown?: string // Questions & Interview Prompts in Markdown
+  fullTopic?: string // 1. Full Topic Deep Dive (Markdown)
+  keyNotes?: string // 2. Key Notes / Quick Takeaways (Markdown)
+  definitions?: string // 3. Definitions & Key Terminology (Markdown)
+  questionsMarkdown?: string // 4. Questions & Interview Prompts (Markdown)
+  notes?: string // Legacy alias
+  markdownNotes?: string // Legacy alias
   status: TopicStatus
   completedAt?: string | null
   learnedAt?: string | null // Optional legacy/planned date
@@ -137,10 +139,12 @@ export const topicFormSchema = z.object({
   difficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
   chatgptUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   description: z.string().optional(),
-  notes: z.string().optional(),
-  markdownNotes: z.string().optional(),
+  fullTopic: z.string().optional(),
+  keyNotes: z.string().optional(),
   definitions: z.string().optional(),
   questionsMarkdown: z.string().optional(),
+  notes: z.string().optional(),
+  markdownNotes: z.string().optional(),
   tags: z.string().optional(), // comma-separated
   questions: z.array(
     z.object({

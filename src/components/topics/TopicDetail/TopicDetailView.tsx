@@ -212,7 +212,7 @@ export function TopicDetailView() {
         </div>
       </div>
 
-      {/* Key Definitions (Markdown) */}
+      {/* 1. Key Definitions (Markdown) */}
       {topic.definitions && (
         <div className="p-6 rounded-2xl border border-amber-500/25 bg-amber-500/5 space-y-3 shadow-sm">
           <div className="flex items-center gap-2 pb-2 border-b border-amber-500/20">
@@ -225,20 +225,33 @@ export function TopicDetailView() {
         </div>
       )}
 
-      {/* Comprehensive Study Notes (Markdown) */}
-      {topic.markdownNotes && (
+      {/* 2. Key Notes & Summary (Markdown) */}
+      {(topic.keyNotes || (topic.notes && topic.notes !== topic.fullTopic)) && (
+        <div className="p-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 space-y-3 shadow-sm">
+          <div className="flex items-center gap-2 pb-2 border-b border-emerald-500/20">
+            <FileText className="w-4 h-4 text-emerald-500" />
+            <h2 className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+              Key Notes & Mental Models
+            </h2>
+          </div>
+          <MarkdownRenderer content={topic.keyNotes || topic.notes || ''} />
+        </div>
+      )}
+
+      {/* 3. Full Topic Deep Dive (Markdown) */}
+      {(topic.fullTopic || topic.markdownNotes) && (
         <div className="p-6 rounded-2xl border bg-card/60 space-y-3 shadow-sm">
           <div className="flex items-center gap-2 pb-2 border-b">
             <FileText className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-bold text-foreground">
-              Comprehensive Study Notes & Explanations
+              Full Topic Deep Dive & Explanations
             </h2>
           </div>
-          <MarkdownRenderer content={topic.markdownNotes} />
+          <MarkdownRenderer content={topic.fullTopic || topic.markdownNotes || ''} />
         </div>
       )}
 
-      {/* Interview Questions & Problem Prompts (Markdown) */}
+      {/* 4. Interview Questions & Problem Prompts (Markdown) */}
       {topic.questionsMarkdown && (
         <div className="p-6 rounded-2xl border border-blue-500/25 bg-blue-500/5 space-y-3 shadow-sm">
           <div className="flex items-center gap-2 pb-2 border-b border-blue-500/20">

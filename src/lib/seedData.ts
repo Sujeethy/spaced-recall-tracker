@@ -89,17 +89,23 @@ export const SEED_TOPICS: Topic[] = [
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Execution Context (EC)**: The internal wrapper created by the JS engine containing the code currently evaluated, its variable environment, scope chain, and \`this\` binding.
-- **Call Stack**: A LIFO (Last-In-First-Out) data structure that records where in the program execution is currently happening.
-- **Creation Phase**: The compile-step where the JS engine parses identifiers, allocates memory for variables (\`undefined\` for \`var\`, uninitialized for \`let\`/\`const\`), and hoists full function bodies.
-- **Execution Phase**: The sequential line-by-line interpretation and assignment of evaluated expressions.
-- **Memory Heap**: An unstructured region of memory used for dynamic memory allocation of reference types (Objects, Arrays, Closures).`,
-    markdownNotes: `# Execution Context & Memory
+- **Execution Context (EC)**: The internal environment created by the JS engine that wraps and executes code.
+- **Call Stack**: LIFO data structure storing active execution contexts.
+- **Creation Phase**: Memory allocation step where variables are assigned \`undefined\` and function declarations are fully stored.
+- **Execution Phase**: Step where JavaScript interprets and assigns values line by line.
+- **Memory Heap**: Unstructured memory area for dynamic reference object allocations.`,
+    keyNotes: `### Key Takeaways & Mental Models
+
+- **Every JS function call creates its own Execution Context** pushed onto the Call Stack.
+- **Creation precedes execution**: Memory is already mapped before line 1 runs.
+- Primitive types live on the Stack; reference objects live in the Heap.
+- Garbage collector uses **Mark-and-Sweep** to clean objects unreachable from roots.`,
+    fullTopic: `# Execution Context & Memory Deep Dive
 
 ### Execution Context Lifecycle
-When a JavaScript script runs, the engine creates the **Global Execution Context (GEC)**. Every time a function is invoked, a new **Function Execution Context (FEC)** is pushed onto the Call Stack.
+When JavaScript executes, it boots in the **Global Execution Context (GEC)**. Each function call pushes a new **Function Execution Context (FEC)** onto the Call Stack.
 
 \`\`\`javascript
 var a = 10;
@@ -110,27 +116,34 @@ function calculateSum(x, y) {
 var result = calculateSum(a, 20);
 \`\`\`
 
-### Step-by-Step Breakdown:
-1. **Global Creation Phase**:
-   - \`window\` / \`global\` object created.
-   - \`this\` bound to global object.
-   - Variable \`a\` allocated with \`undefined\`.
-   - Function \`calculateSum\` copied entirely into heap with pointer in lexical scope.
-   - Variable \`result\` allocated with \`undefined\`.
-2. **Global Execution Phase**:
-   - \`a = 10\` assigned.
-   - \`calculateSum(10, 20)\` invoked → pushes new FEC onto Call Stack.
-3. **Function FEC Lifecycle**:
-   - Creation phase: parameters \`x=10, y=20\`, \`total=undefined\`.
-   - Execution phase: \`total = 30\`, returns \`30\`.
-   - Stack frame popped off and cleaned up by Mark-and-Sweep Garbage Collector.`,
+### Step-by-Step Execution:
+1. **Creation Phase**:
+   - Creates global object (\`window\` or \`global\`) and binds \`this\`.
+   - Allocates memory: \`a = undefined\`, \`calculateSum = function reference\`, \`result = undefined\`.
+2. **Execution Phase**:
+   - Assigns \`a = 10\`.
+   - Invokes \`calculateSum(10, 20)\` → pushes new FEC to Call Stack.
+   - Computes \`total = 30\`, pops FEC off stack, assigns \`result = 30\`.`,
+    markdownNotes: `# Execution Context & Memory Deep Dive
+
+### Execution Context Lifecycle
+When JavaScript executes, it boots in the **Global Execution Context (GEC)**. Each function call pushes a new **Function Execution Context (FEC)** onto the Call Stack.
+
+\`\`\`javascript
+var a = 10;
+function calculateSum(x, y) {
+  var total = x + y;
+  return total;
+}
+var result = calculateSum(a, 20);
+\`\`\``,
     questionsMarkdown: `### Top Interview Questions & Code Challenges
 
 1. **What is the difference between Call Stack overflow and Memory Leak?**
-   - *Call Stack Overflow*: Exceeding the maximum call frame depth (e.g. infinite un-terminated recursion).
-   - *Memory Leak*: Unused objects in the Memory Heap that retain active references from the root (e.g. uncleared global timers or stale event listeners).
+   - *Stack Overflow*: Exceeding maximum recursion/frame limits.
+   - *Memory Leak*: Unused heap objects retaining reachable root references.
 
-2. **Output Prediction Challenge:**
+2. **Predict Output:**
    \`\`\`javascript
    function test() {
      console.log(a);
@@ -140,7 +153,7 @@ var result = calculateSum(a, 20);
    }
    test();
    \`\`\`
-   - *Output*: \`undefined\`, then \`2\`.`,
+   - *Output*: \`undefined\` then \`2\`.`,
     questions: [
       {
         id: 'd1-t1-q1',
@@ -164,53 +177,47 @@ var result = calculateSum(a, 20);
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Hoisting**: The behavior where variable and function declarations are moved to the top of their enclosing scope during the compilation/creation phase.
-- **Lexical Scope**: Scope defined by the physical location of variables/functions in the source code at authoring time.
-- **Temporal Dead Zone (TDZ)**: The period of execution between entering a block scope and the line where a \`let\` or \`const\` variable is initialized. Accessing it throws a \`ReferenceError\`.
-- **Scope Chain**: The hierarchy of lexical environments searched from inner to outer when resolving an identifier.`,
-    markdownNotes: `# Hoisting & Temporal Dead Zone (TDZ)
+- **Hoisting**: Moving variable/function declarations to top of scope at compilation.
+- **Lexical Scope**: Scope defined by source code structure at authoring time.
+- **Temporal Dead Zone (TDZ)**: Period from block entry until variable initialization where access throws \`ReferenceError\`.
+- **Scope Chain**: Chain of parent lexical environments searched when resolving identifiers.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### var vs let / const
-| Property | \`var\` | \`let\` / \`const\` |
+- \`var\` is **function-scoped** and hoisted initialized as \`undefined\`.
+- \`let\` / \`const\` are **block-scoped** and hoisted in an **uninitialized** state (TDZ).
+- Outer scope cannot access inner variables; inner scope accesses outer variables via the Scope Chain.`,
+    fullTopic: `# Hoisting & Temporal Dead Zone (TDZ)
+
+### var vs let/const Comparison
+| Feature | \`var\` | \`let\` / \`const\` |
 | :--- | :--- | :--- |
-| **Scope** | Function Scope | Block Scope \`{ ... }\` |
-| **Hoisting** | Initialized as \`undefined\` | Hoisted in **uninitialized** state |
-| **Re-declaration** | Allowed | SyntaxError |
-| **Global Object Property** | Yes (\`window.x\`) | No |
+| **Scope** | Function | Block \`{ ... }\` |
+| **Hoisted as** | \`undefined\` | Uninitialized (TDZ) |
+| **Re-declaration** | Permitted | SyntaxError |
 
 \`\`\`javascript
 {
-  // TDZ for 'score' starts here
-  // console.log(score); // Throws ReferenceError: Cannot access 'score' before initialization
-  let score = 95; // TDZ ends here
-  console.log(score); // 95
+  // TDZ for 'score'
+  // console.log(score); // ReferenceError
+  let score = 100; // TDZ ends
+  console.log(score); // 100
 }
 \`\`\``,
-    questionsMarkdown: `### Interview Questions
+    markdownNotes: `# Hoisting & Temporal Dead Zone (TDZ)
 
-1. **Why does TDZ exist in JavaScript?**
-   - To catch bugs where variables are read before their intended assignment and to make \`const\` truly immutable from its declaration point.
-2. **Predict Output:**
-   \`\`\`javascript
-   var x = 10;
-   function foo() {
-     console.log(x);
-     let x = 20;
-   }
-   foo();
-   \`\`\`
-   - *Result*: Throws \`ReferenceError\` because \`let x\` inside \`foo\` shadows the outer variable and creates an inner TDZ.`,
-    questions: [
-      {
-        id: 'd1-t2-q1',
-        question: 'What error occurs when accessing a `let` variable before declaration?',
-        answer: 'ReferenceError due to the Temporal Dead Zone (TDZ).',
-        correctCount: 0,
-        incorrectCount: 0,
-      }
-    ],
+### var vs let/const Comparison
+| Feature | \`var\` | \`let\` / \`const\` |
+| :--- | :--- | :--- |
+| **Scope** | Function | Block \`{ ... }\` |
+| **Hoisted as** | \`undefined\` | Uninitialized (TDZ) |
+| **Re-declaration** | Permitted | SyntaxError |`,
+    questionsMarkdown: `### Top Interview Questions
+
+1. **Why does TDZ exist in JS?**
+   - Prevents accessing variables before initialization and makes \`const\` truly immutable from declaration point.`,
+    questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
     archived: false,
@@ -225,46 +232,37 @@ var result = calculateSum(a, 20);
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Closure**: A function bundled together with references to its surrounding lexical environment, allowing it to access outer variables even after the outer function has returned.
-- **Encapsulation**: Hiding internal object details and exposing only a public API.
-- **Stale Closure**: A bug where a closure captures an outdated variable snapshot from a previous render cycle (common in React \`useEffect\` / \`useCallback\`).`,
-    markdownNotes: `# Closures & Encapsulation
+- **Closure**: Function bundled with its lexical environment references.
+- **Encapsulation**: Restricting direct access to object internals and state.
+- **Stale Closure**: Closure holding an outdated snapshot of variables from previous renders.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Practical Module Pattern
+- Closures let functions maintain state across invocations without global pollution.
+- In React \`useEffect\` / \`useCallback\`, stale closures happen if dependency arrays are omitted.
+- Fix React stale closures using functional state updaters: \`setCount(c => c + 1)\`.`,
+    fullTopic: `# Closures & Encapsulation
+
 \`\`\`javascript
-function createBankAccount(initialBalance) {
-  let balance = initialBalance; // Private variable hidden from outer scope
-
+function createCounter() {
+  let count = 0; // Private encapsulated state
   return {
-    deposit(amount) {
-      if (amount > 0) balance += amount;
-      return balance;
-    },
-    getBalance() {
-      return balance;
-    }
+    increment: () => ++count,
+    getCount: () => count,
   };
 }
 
-const account = createBankAccount(100);
-account.deposit(50); // 150
-console.log(account.balance); // undefined (cannot be tampered with)
+const counter = createCounter();
+console.log(counter.increment()); // 1
+console.log(counter.count); // undefined (cannot be tampered with)
 \`\`\``,
-    questionsMarkdown: `### Interview Questions
+    markdownNotes: `# Closures & Encapsulation`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **How do you fix a Stale Closure in a React \`useEffect\` interval?**
-   - Use the functional state updater \`setCount(prev => prev + 1)\` or pass dependencies properly in the dependency array.`,
-    questions: [
-      {
-        id: 'd1-t3-q1',
-        question: 'What is a closure in JavaScript?',
-        answer: 'A function that retains access to its outer lexical scope variables even after the outer function execution has finished.',
-        correctCount: 0,
-        incorrectCount: 0,
-      }
-    ],
+1. **How to fix a Stale Closure in \`setInterval\` within \`useEffect\`?**
+   - Pass functional updater \`setState(prev => prev + 1)\` or list state in dependency array.`,
+    questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
     archived: false,
@@ -279,23 +277,28 @@ console.log(account.balance); // undefined (cannot be tampered with)
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **\`this\` Keyword**: A reference determined by *how* a function is called (call-site) rather than where it is declared (except for arrow functions).
-- **Implicit Binding**: When a function is called with a context object (\`obj.method()\`).
-- **Explicit Binding**: Manually supplying context using \`.call()\`, \`.apply()\`, or \`.bind()\`.
-- **Lexical Binding**: Arrow functions \`() => {}\` do not have their own \`this\`; they inherit \`this\` from their enclosing lexical scope.`,
-    markdownNotes: `# The \`this\` Keyword in JavaScript
+- **\`this\`**: Execution context determined at call-site (invocation time).
+- **Implicit Binding**: \`obj.fn()\` binds \`this\` to \`obj\`.
+- **Explicit Binding**: \`fn.call(ctx)\`, \`fn.apply(ctx)\`, \`fn.bind(ctx)\`.
+- **Lexical Binding**: Arrow functions inherit \`this\` from enclosing scope.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### 4 Rules of \`this\` Resolution:
-1. **New Binding**: \`new Foo()\` → \`this\` points to the freshly created object.
-2. **Explicit Binding**: \`foo.call(ctx, arg1)\` / \`foo.apply(ctx, [args])\` / \`foo.bind(ctx)\`.
-3. **Implicit Binding**: \`user.greet()\` → \`this\` is \`user\`.
-4. **Default Binding**: Standalone invocation \`foo()\` → \`window\` in non-strict mode, \`undefined\` in strict mode (\`"use strict"\`).`,
-    questionsMarkdown: `### Interview Questions
+- 4 Binding Rules: \`new\` > Explicit (\`call/apply/bind\`) > Implicit (\`obj.fn\`) > Default (\`window\` / \`undefined\`).
+- Arrow functions **never** have their own \`this\`, \`arguments\`, or \`super\`.`,
+    fullTopic: `# The \`this\` Keyword in JavaScript
 
-1. **Can you re-bind an arrow function using \`.bind()\`?**
-   - No, arrow functions inherit \`this\` lexically; calling \`.bind()\` on an arrow function has no effect on its context.`,
+### Priority Order:
+1. \`new Foo()\` → New object instance.
+2. \`foo.call(ctx)\` / \`bind(ctx)\` → Specified context.
+3. \`user.greet()\` → \`user\` object.
+4. \`foo()\` → Global object (\`undefined\` in strict mode).`,
+    markdownNotes: `# The \`this\` Keyword in JavaScript`,
+    questionsMarkdown: `### Top Interview Questions
+
+1. **Can you rebind an arrow function using \`.bind()\`?**
+   - No, arrow functions ignore explicit binding calls.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -311,31 +314,27 @@ console.log(account.balance); // undefined (cannot be tampered with)
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Prototype Chain**: The delegation lookup mechanism where property lookups traverse up \`__proto__\` until found or reaching \`null\`.
-- **\`prototype\`**: Property on constructor functions used to build \`__proto__\` on instances created via \`new\`.
-- **\`__proto__\`**: Accessor property on instances pointing to their prototype delegate.`,
-    markdownNotes: `# Prototypal Inheritance & Delegation
+- **Prototype Chain**: Linked delegation where missing properties look up \`__proto__\` hierarchy.
+- **\`prototype\`**: Object blueprint attached to constructor functions.
+- **\`__proto__\`**: Pointer on object instances to their prototype delegate.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-JavaScript uses **prototypal delegation** rather than classical class copying.
+- JS objects **delegate** to prototypes rather than copy class definitions.
+- End of prototype chain is \`Object.prototype.__proto__ === null\`.`,
+    fullTopic: `# Prototypal Inheritance Mechanics
 
 \`\`\`javascript
-const animal = {
-  eats: true,
-  walk() { return "Walking..."; }
-};
-
-const rabbit = Object.create(animal);
-rabbit.jumps = true;
-
-console.log(rabbit.walk()); // Found on animal via Prototype Chain delegation
-console.log(Object.getPrototypeOf(rabbit) === animal); // true
+const proto = { greet() { return "Hello!"; } };
+const obj = Object.create(proto);
+console.log(obj.greet()); // "Hello!" resolved via Prototype Chain
 \`\`\``,
-    questionsMarkdown: `### Interview Questions
+    markdownNotes: `# Prototypal Inheritance Mechanics`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **What is the root of the prototype chain?**
-   - \`Object.prototype.__proto__\` which is \`null\`.`,
+1. **Difference between \`__proto__\` and \`prototype\`?**
+   - \`prototype\` exists on constructors; \`__proto__\` exists on created instances.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -351,32 +350,27 @@ console.log(Object.getPrototypeOf(rabbit) === animal); // true
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Event Loop**: Continuous loop checking if the Call Stack is empty to process queued asynchronous callbacks.
-- **Microtask Queue**: High priority queue (Promises, \`queueMicrotask\`, \`MutationObserver\`) drained completely before any macrotask or UI render.
-- **Macrotask Queue**: Task queue (\`setTimeout\`, \`setInterval\`, I/O, UI events) processed one per event loop turn.`,
-    markdownNotes: `# Browser Event Loop & Priority Queues
+- **Event Loop**: Coordinator between Call Stack and task queues.
+- **Microtask Queue**: High priority queue (Promises, \`queueMicrotask\`) drained to completion every tick.
+- **Macrotask Queue**: Task queue (\`setTimeout\`, \`setInterval\`, I/O) processed 1 item per tick.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Priority Sequence:
-1. Synchronous Call Stack execution.
-2. **All Microtasks** (Queue drained to 0).
-3. Browser UI Rendering & Animation Frames.
-4. **One Macrotask** from Task Queue.
-5. Repeat.
+- Microtasks **always** run before UI rendering and before next macrotask.
+- Starving microtasks freezes browser rendering.`,
+    fullTopic: `# Browser Event Loop Architecture
 
-\`\`\`javascript
-console.log('1');
-setTimeout(() => console.log('2 (Macrotask)'), 0);
-Promise.resolve().then(() => console.log('3 (Microtask)'));
-queueMicrotask(() => console.log('4 (Microtask)'));
-console.log('5');
-// Output: 1, 5, 3, 4, 2
-\`\`\``,
-    questionsMarkdown: `### Interview Questions
+### Execution Priority:
+1. Sync Call Stack.
+2. All Microtasks (Queue drained completely).
+3. UI Render pipeline.
+4. One Macrotask from Queue.`,
+    markdownNotes: `# Browser Event Loop Architecture`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **What happens if a microtask schedules another microtask recursively?**
-   - It starves the event loop, completely blocking macrotasks and browser UI rendering (UI freeze).`,
+1. **Predict output of \`setTimeout(0)\` vs \`Promise.resolve().then()\`:**
+   - Promise (microtask) always prints before \`setTimeout\` (macrotask).`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -392,27 +386,30 @@ console.log('5');
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Promise**: An object representing eventual completion (or failure) of an asynchronous operation and its resulting value.
-- **States**: \`pending\`, \`fulfilled\`, or \`rejected\`.
-- **\`Promise.all\`**: Fails-fast on first rejection; resolves when all fulfill.
-- **\`Promise.allSettled\`**: Never rejects early; returns status array of all promises.
-- **\`Promise.race\`**: Settles with the first settled promise (fulfilled or rejected).
-- **\`Promise.any\`**: Resolves with first fulfilled promise; rejects with AggregateError if all reject.`,
-    markdownNotes: `# Promises & Combinators
+- **Promise**: Future value with 3 states: \`pending\`, \`fulfilled\`, \`rejected\`.
+- **\`Promise.all\`**: Fails-fast on first rejection.
+- **\`Promise.allSettled\`**: Never rejects early; returns status array.
+- **\`Promise.race\`**: Returns first settled promise.
+- **\`Promise.any\`**: Returns first fulfilled promise.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Combinators Comparison Table
-| Combinator | Short-circuits on? | Return Value |
+- \`async/await\` is syntactic sugar for generator coroutines + promises.
+- Always handle rejections with \`try/catch\` or \`.catch()\`.`,
+    fullTopic: `# Promises & Combinators Deep Dive
+
+| Combinator | Short-circuits on | Result |
 | :--- | :--- | :--- |
 | \`Promise.all\` | First Rejection | Array of resolved values |
 | \`Promise.allSettled\` | Never | Array of \`{status, value/reason}\` |
-| \`Promise.race\` | First Settle | First value/reason |
+| \`Promise.race\` | First Settle | First settled value |
 | \`Promise.any\` | First Fulfillment | First fulfilled value |`,
-    questionsMarkdown: `### Interview Questions
+    markdownNotes: `# Promises & Combinators Deep Dive`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **How does \`async/await\` work under the hood?**
-   - It is syntactic sugar over Promises combined with Generator functions (\`yield\`) run by an automated coroutine runner.`,
+1. **Difference between \`Promise.all\` and \`Promise.allSettled\`?**
+   - \`all\` aborts on first failure; \`allSettled\` collects outcomes of all promises.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -428,27 +425,31 @@ console.log('5');
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Debounce**: Delays function execution until a specified quiet period has elapsed with no new triggers.
-- **Throttle**: Enforces a maximum execution rate of once per time window regardless of invocation frequency.
-- **Event Delegation**: Attaching a single event listener to a parent container to manage events from all current and future child elements using \`e.target\`.
-- **Event Phases**: 1. Capturing Phase (window down to target) → 2. Target Phase → 3. Bubbling Phase (target up to window).`,
-    markdownNotes: `# Event Propagation & Frequency Throttling
+- **Debounce**: Delays execution until pause in event triggers.
+- **Throttle**: Caps execution rate to once per time window.
+- **Event Delegation**: Single listener on parent handling events from child elements.
+- **Event Bubbling**: Events propagate up from target to \`window\`.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### 3 Phases of DOM Events
+- Use **Debounce** for search autocomplete and window resize.
+- Use **Throttle** for scroll listeners and game loops.
+- Use **Event Delegation** for dynamic lists to avoid 1000s of event listeners.`,
+    fullTopic: `# DOM Events & Frequency Optimization
+
 \`\`\`
-Window → Document → <body> → <div> (1. Capturing Phase)
+Window → Document → <body> → <div> (1. Capture)
                                ↓
-                        [ Button Target ] (2. Target Phase)
+                        [ Button ] (2. Target)
                                ↓
-Window ← Document ← <body> ← <div> (3. Bubbling Phase)
+Window ← Document ← <body> ← <div> (3. Bubble)
 \`\`\``,
-    questionsMarkdown: `### Interview Questions
+    markdownNotes: `# DOM Events & Frequency Optimization`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **Difference between \`e.target\` and \`e.currentTarget\`?**
-   - \`e.target\`: The actual DOM element that triggered the event.
-   - \`e.currentTarget\`: The element that has the active event listener attached.`,
+1. **\`e.target\` vs \`e.currentTarget\`:**
+   - \`target\` is element clicked; \`currentTarget\` is element listener is attached to.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -464,36 +465,32 @@ Window ← Document ← <body> ← <div> (3. Bubbling Phase)
     learnedAt: today,
     categoryId: 'cat-frontend',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Fiber Architecture**: React 16+ reimplementation of the reconciliation engine using an incremental, interruptible singly-linked list of work units (Fibers).
-- **Reconciliation**: The algorithm React uses to diff two Virtual DOM trees and compute the minimal set of DOM mutations.
-- **Render Phase**: Asynchronous, interruptible phase computing side effects (flags).
-- **Commit Phase**: Synchronous phase applying mutations to the real DOM and running layout effects.`,
-    markdownNotes: `# React Fiber & Reconciliation
+- **Fiber Architecture**: Linked list data structure supporting interruptible rendering.
+- **Reconciliation**: Algorithm diffing Virtual DOM trees.
+- **Render Phase**: Interruptible computation of side-effect flags.
+- **Commit Phase**: Synchronous application of DOM mutations.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Fiber Linked-List Pointers
-Each Fiber node contains 3 structural pointers:
-- \`child\`: Points to its first direct child.
-- \`sibling\`: Points to its next sibling.
-- \`return\`: Points back to its parent Fiber.
+- Fiber enables Concurrent Mode and prioritization of user interactions over background updates.
+- Keys provide stable identities for \(O(n)\) list diffing.`,
+    fullTopic: `# React Fiber Architecture & Diffing
 
 \`\`\`javascript
-// Simplified Fiber unit structure
 const fiberNode = {
   type: 'div',
-  props: { className: 'card' },
-  child: childFiber,
+  child: firstChildFiber,
   sibling: nextSiblingFiber,
   return: parentFiber,
   alternate: currentFiber, // Double buffering
-  flags: Placement | Update,
 };
 \`\`\``,
-    questionsMarkdown: `### Interview Questions
+    markdownNotes: `# React Fiber Architecture & Diffing`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **Why does React need \`key\` prop in lists?**
-   - Keys provide stable identity across renders, allowing React to match children in \(O(n)\) time instead of tearing down and recreating entire subtrees.`,
+1. **Why are keys essential in React lists?**
+   - To match children across renders in \(O(n)\) time rather than destroying subtrees.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -513,41 +510,30 @@ const fiberNode = {
     learnedAt: today,
     categoryId: 'cat-backend',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Libuv**: Multi-platform C library providing asynchronous I/O based on event loops and thread pools.
-- **Timers Phase**: Executes callbacks scheduled by \`setTimeout\` and \`setInterval\`.
-- **Poll Phase**: Retrieves new I/O events; blocks for incoming connections if no other tasks are queued.
-- **Check Phase**: Executes callbacks scheduled specifically by \`setImmediate\`.
-- **\`process.nextTick\`**: Runs immediately after the current operation finishes, before the event loop advances.`,
-    markdownNotes: `# Node.js Libuv Event Loop Phases
+- **Libuv**: C library providing async I/O and thread pooling for Node.js.
+- **Timers Phase**: Executes \`setTimeout\` and \`setInterval\` callbacks.
+- **Poll Phase**: Polls for incoming I/O connections and events.
+- **Check Phase**: Executes \`setImmediate\` callbacks.
+- **\`process.nextTick\`**: Runs immediately after current operation, before event loop moves.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### The 6 Execution Phases:
-\`\`\`
-┌───────────────────────────┐
-│          Timers           │ ─── setTimeout, setInterval
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│     Pending Callbacks     │ ─── I/O callbacks deferred to next loop iteration
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│       Idle, Prepare       │ ─── Internal Libuv only
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│           Poll            │ ─── Retrieve new I/O events; execute I/O callbacks
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│           Check           │ ─── setImmediate callbacks
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│      Close Callbacks      │ ─── e.g. socket.on('close', ...)
-└───────────────────────────┘
-\`\`\``,
-    questionsMarkdown: `### Interview Questions
+- Node event loop has 6 distinct phases in Libuv.
+- \`process.nextTick\` is prioritized before microtasks and before the next phase.`,
+    fullTopic: `# Node.js Libuv 6 Phases
 
-1. **\`process.nextTick()\` vs \`setImmediate()\`?**
-   - \`process.nextTick()\` fires immediately before the event loop continues (microtask level).
-   - \`setImmediate()\` fires on the upcoming **Check Phase** of the Libuv cycle.`,
+1. **Timers**: \`setTimeout\`, \`setInterval\`.
+2. **Pending Callbacks**: Deferred I/O callbacks.
+3. **Idle, Prepare**: Internal.
+4. **Poll**: Retrieve new I/O events.
+5. **Check**: \`setImmediate\` callbacks.
+6. **Close Callbacks**: \`socket.on('close')\`.`,
+    markdownNotes: `# Node.js Libuv 6 Phases`,
+    questionsMarkdown: `### Top Interview Questions
+
+1. **\`setImmediate\` vs \`process.nextTick\`:**
+   - \`nextTick\` runs immediately in current tick; \`setImmediate\` runs in Check Phase.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -563,21 +549,20 @@ const fiberNode = {
     learnedAt: today,
     categoryId: 'cat-backend',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Thread Pool**: A pool of worker threads (default: 4) used by Libuv for tasks where OS async primitives do not exist (fs, crypto, zlib, dns lookup).
-- **Non-blocking Sockets**: Network I/O handled directly by the OS kernel event notification system (\`epoll\` on Linux, \`kqueue\` on macOS, \`IOCP\` on Windows) with 0 thread pool overhead.`,
-    markdownNotes: `# Libuv Concurrency & Thread Pool
+- **Thread Pool**: Worker pool (default: 4) for tasks lacking OS async support (\`fs\`, \`crypto\`, \`zlib\`, \`dns\`).
+- **Non-blocking I/O**: Direct kernel notifications (\`epoll\`/\`kqueue\`) with 0 thread pool overhead.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### What uses the Libuv Thread Pool?
-1. **File System (\`fs\`)**: All synchronous and asynchronous file system operations.
-2. **Crypto**: \`crypto.pbkdf2\`, \`crypto.scrypt\`, \`crypto.randomBytes\`.
-3. **Compression**: \`zlib\` asynchronous APIs.
-4. **DNS**: \`dns.lookup\` (which resolves via system \`getaddrinfo\`).`,
-    questionsMarkdown: `### Interview Questions
+- Network sockets never use the Thread Pool (they use kernel non-blocking sockets).
+- Scale thread pool via \`UV_THREADPOOL_SIZE=16\` for heavy crypto workloads.`,
+    fullTopic: `# Libuv Concurrency & Thread Pool Architecture`,
+    markdownNotes: `# Libuv Concurrency & Thread Pool Architecture`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **How do you scale thread pool size for high-crypto workloads?**
-   - Set environment variable \`UV_THREADPOOL_SIZE=16\` before the Node process boots.`,
+1. **What operations utilize Libuv thread pool?**
+   - \`fs\`, \`crypto.pbkdf2\`, \`zlib\`, and \`dns.lookup\`.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -593,33 +578,26 @@ const fiberNode = {
     learnedAt: today,
     categoryId: 'cat-backend',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Buffer**: Fixed-size raw memory allocation outside the V8 heap for binary data.
-- **Stream**: An abstract interface for working with streaming data sequentially chunk-by-chunk.
-- **Backpressure**: The flow-control mechanism signaled when a consumer is slower than a producer, preventing memory exhaustion.
-- **\`highWaterMark\`**: The threshold buffer size (default 16KB for object mode, 64KB for byte streams) before \`stream.write()\` returns \`false\`.`,
-    markdownNotes: `# Node.js Streams & Backpressure
+- **Buffer**: Fixed-size raw binary memory allocation outside V8.
+- **Stream**: Chunk-by-chunk processing interface for large data.
+- **Backpressure**: Flow-control signal when consumer is slower than producer.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Safe Pipeline Pattern:
+- Always use \`pipeline()\` over \`.pipe()\` for automatic error handling and resource cleanup.
+- Prevents loading gigabytes into RAM.`,
+    fullTopic: `# Streams & Backpressure
+
 \`\`\`javascript
 const { pipeline } = require('stream/promises');
-const fs = require('fs');
-const zlib = require('zlib');
-
-async function compressFile(source, target) {
-  await pipeline(
-    fs.createReadStream(source),
-    zlib.createGzip(),
-    fs.createWriteStream(target)
-  );
-  console.log('Stream completed with automatic backpressure & error cleanup.');
-}
+await pipeline(fs.createReadStream('src.log'), zlib.createGzip(), fs.createWriteStream('out.gz'));
 \`\`\``,
-    questionsMarkdown: `### Interview Questions
+    markdownNotes: `# Streams & Backpressure`,
+    questionsMarkdown: `### Top Interview Questions
 
 1. **Why is \`pipeline()\` preferred over \`.pipe()\`?**
-   - \`pipeline()\` properly destroys streams and cleans up file descriptors on error, whereas \`.pipe()\` leaks memory on unexpected stream closure.`,
+   - Automatically cleans up file descriptors and prevents memory leaks on error.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -635,22 +613,20 @@ async function compressFile(source, target) {
     learnedAt: today,
     categoryId: 'cat-backend',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Cluster Module**: Enables creating child processes that share server ports across multi-core CPUs.
-- **Child Process (\`spawn\` / \`fork\`)**: Spawns isolated OS processes with independent memory and IPC channels.
-- **Worker Threads**: Spawns lightweight OS threads that can share memory using \`SharedArrayBuffer\`.`,
-    markdownNotes: `# Scaling Node.js: Multi-Processing vs Multi-Threading
+- **Cluster Module**: Forking multiple processes sharing one server port.
+- **Worker Threads**: Lightweight threads sharing memory via \`SharedArrayBuffer\`.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-| Technology | Memory Model | Best Use Case |
-| :--- | :--- | :--- |
-| **Cluster Module** | Isolated V8 instances per core | Horizontal scale of HTTP servers |
-| **Worker Threads** | Shared memory (\`SharedArrayBuffer\`) | CPU-heavy data parsing, image processing |
-| **\`child_process.spawn\`** | Independent OS process | Executing shell commands / external binaries |`,
-    questionsMarkdown: `### Interview Questions
+- Use **Cluster** for scaling HTTP servers across CPU cores.
+- Use **Worker Threads** for CPU-intensive data transformations.`,
+    fullTopic: `# Scaling Node.js: Processes vs Worker Threads`,
+    markdownNotes: `# Scaling Node.js: Processes vs Worker Threads`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **When should you use Worker Threads over Cluster module?**
-   - Use Worker Threads for shared-memory CPU computation (e.g. video transcode, AI tokenization); use Cluster for network request distribution.`,
+1. **When to use Worker Threads vs Cluster?**
+   - Worker Threads for shared memory CPU tasks; Cluster for network request balancing.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -666,21 +642,22 @@ async function compressFile(source, target) {
     learnedAt: today,
     categoryId: 'cat-backend',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **JWT (JSON Web Token)**: Stateless, cryptographically signed token containing claims.
-- **XSS (Cross-Site Scripting)**: Injecting malicious client-side scripts executed in a user's browser.
-- **CSRF (Cross-Site Request Forgery)**: Tricking an authenticated user's browser into sending unauthorized requests.
-- **SameSite Cookie**: Attribute (\`Strict\` / \`Lax\`) preventing cookies from being sent in cross-site requests.`,
-    markdownNotes: `# Backend Security & Authentication
+- **JWT**: Stateless cryptographically signed token.
+- **XSS**: Malicious scripts executed in browser.
+- **CSRF**: Forged unauthorized cross-origin requests.
+- **SameSite Cookie**: Blocks cookie from being sent on cross-site requests.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Modern Dual-Token Auth Architecture
-1. **Short-lived Access Token** (5-15 mins): Kept in memory.
-2. **Long-lived Refresh Token** (7-30 days): Stored in an **\`HttpOnly, Secure, SameSite=Strict\`** cookie and tracked in Redis for instant revocation.`,
-    questionsMarkdown: `### Interview Questions
+- Store Refresh Token in \`HttpOnly, Secure, SameSite=Strict\` cookie.
+- Never store JWT access tokens in \`localStorage\` due to XSS vulnerability.`,
+    fullTopic: `# Security & Authentication Architecture`,
+    markdownNotes: `# Security & Authentication Architecture`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **Why should JWT access tokens never be stored in \`localStorage\`?**
-   - Because any XSS vulnerability in any dependency can read \`localStorage\` and exfiltrate user credentials.`,
+1. **How to protect cookies against CSRF?**
+   - Set \`SameSite=Strict\` or \`SameSite=Lax\` and validate anti-CSRF tokens.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -696,24 +673,23 @@ async function compressFile(source, target) {
     learnedAt: today,
     categoryId: 'cat-backend',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **REST**: Stateless resource-oriented HTTP architecture with standard verbs.
-- **GraphQL**: Query language allowing clients to declare exactly the data shape required.
-- **WebSocket**: Full-duplex, persistent bidirectional TCP connection over single socket.
-- **gRPC**: High-performance RPC framework using HTTP/2 binary framing and Protocol Buffers.`,
-    markdownNotes: `# API Protocol Comparison
+- **REST**: Resource-oriented HTTP API.
+- **GraphQL**: Client-defined query language.
+- **WebSocket**: Bidirectional persistent TCP socket.
+- **gRPC**: Binary Protocol Buffer RPC over HTTP/2.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-| Protocol | Transport | Serialization | Best Use Case |
-| :--- | :--- | :--- | :--- |
-| **REST** | HTTP/1.1 or HTTP/2 | JSON | Public APIs, CRUD |
-| **GraphQL** | HTTP/1.1 or HTTP/2 | JSON | Complex frontend dashboards |
-| **WebSockets** | TCP | Binary / Text | Real-time chat, trading feeds |
-| **gRPC** | HTTP/2 | Protobuf (Binary) | Microservice-to-microservice IPC |`,
-    questionsMarkdown: `### Interview Questions
+- Use **gRPC** for internal microservice communication.
+- Use **WebSockets** for live trading/chat feeds.
+- Use **REST** for public consumer APIs.`,
+    fullTopic: `# API Protocol Comparison Matrix`,
+    markdownNotes: `# API Protocol Comparison Matrix`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **What gives gRPC massive performance advantages over REST?**
-   - Binary Protobuf serialization (smaller payload, fast parse) and HTTP/2 multiplexed streaming over single connection.`,
+1. **Why is gRPC faster than REST?**
+   - Binary Protobuf serialization + HTTP/2 multiplexing.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -733,21 +709,22 @@ async function compressFile(source, target) {
     learnedAt: today,
     categoryId: 'cat-db',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **RDBMS**: Relational database relying on structured schemas, foreign keys, and strict ACID guarantees.
-- **Document Store**: Stores semi-structured JSON/BSON documents with flexible schemas.
-- **Key-Value Store**: High-throughput in-memory data structure store optimized for \(O(1)\) lookups.`,
-    markdownNotes: `# SQL vs NoSQL Trade-off Matrix
+- **RDBMS**: Relational SQL database with strict schemas and ACID.
+- **Document DB**: Semi-structured JSON/BSON documents.
+- **Key-Value DB**: In-memory high throughput store (\(O(1)\)).`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Comparison:
-- **PostgreSQL**: Strong consistency, complex multi-table joins, relational integrity, JSONB support.
-- **MongoDB**: Hierarchical documents, embedded subdocuments, horizontal shard scaling.
-- **Redis**: Sub-millisecond latency, caching, rate limiting, pub/sub queues.`,
-    questionsMarkdown: `### Interview Questions
+- Choose SQL for financial transactions and complex joins.
+- Choose MongoDB for dynamic schemas and hierarchical documents.
+- Choose Redis for session caching and rate limits.`,
+    fullTopic: `# Database Selection & Trade-offs`,
+    markdownNotes: `# Database Selection & Trade-offs`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **When should you denormalize data in SQL?**
-   - In read-heavy analytical queries where costly multi-table joins become a severe bottleneck.`,
+1. **When to denormalize in SQL?**
+   - When join bottlenecks dominate high-frequency read queries.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -763,28 +740,25 @@ async function compressFile(source, target) {
     learnedAt: today,
     categoryId: 'cat-db',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **B-Tree Index**: Balanced tree data structure with \(O(\log N)\) search, insert, and range queries.
-- **Clustered Index**: Dictates physical ordering of rows on disk (only 1 per table, usually Primary Key).
-- **Non-Clustered Index**: Separate structure storing sorted index keys and pointers to table row IDs.
-- **Leftmost Prefix Rule**: A composite index on \`(A, B, C)\` can only accelerate queries filtering by \`(A)\`, \`(A, B)\`, or \`(A, B, C)\`.`,
-    markdownNotes: `# Database Indexing Mechanics
+- **B-Tree Index**: Balanced tree supporting range and equality queries in \(O(\log N)\).
+- **Clustered Index**: Physical row ordering on disk (1 per table).
+- **Leftmost Prefix Rule**: Composite index \`(A, B)\` only accelerates queries filtering by \`A\` or \`A, B\`.`,
+    keyNotes: `### Key Takeaways & Mental Models
+
+- Indexes speed up reads but add disk write overhead on INSERT/UPDATE.
+- Ensure composite index order matches query WHERE and ORDER BY clauses.`,
+    fullTopic: `# Database Indexing Mechanics
 
 \`\`\`sql
--- Composite Index Example
-CREATE INDEX idx_users_org_status ON users(org_id, status, created_at);
-
--- FAST (Uses index seek):
-SELECT * FROM users WHERE org_id = 42 AND status = 'active';
-
--- SLOW (Full Table Scan - breaks leftmost prefix rule):
-SELECT * FROM users WHERE status = 'active';
+CREATE INDEX idx_user_status ON users(org_id, status);
 \`\`\``,
-    questionsMarkdown: `### Interview Questions
+    markdownNotes: `# Database Indexing Mechanics`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **Why does adding too many indexes hurt performance?**
-   - Every \`INSERT\`, \`UPDATE\`, and \`DELETE\` must rewrite all secondary index trees, incurring heavy disk I/O overhead.`,
+1. **Why can't composite index on \`(A, B)\` accelerate \`WHERE B = 5\`?**
+   - Violates the Leftmost Prefix Rule because tree is ordered by \`A\` first.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -800,24 +774,22 @@ SELECT * FROM users WHERE status = 'active';
     learnedAt: today,
     categoryId: 'cat-db',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **ACID**: Atomicity (all-or-nothing), Consistency, Isolation, Durability (persisted on disk).
-- **Dirty Read**: Reading uncommitted data from a concurrent transaction that could be rolled back.
-- **Non-Repeatable Read**: Re-reading a row returns different values because another transaction modified it.
-- **Phantom Read**: Re-running a range query returns newly inserted rows from another committed transaction.`,
-    markdownNotes: `# Transaction Isolation Levels
+- **ACID**: Atomicity, Consistency, Isolation, Durability.
+- **Dirty Read**: Reading uncommitted transient data.
+- **Non-Repeatable Read**: Row value changes between 2 reads in same transaction.
+- **Phantom Read**: New rows appear in range query on re-read.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-| Isolation Level | Dirty Read | Non-repeatable Read | Phantom Read |
-| :--- | :---: | :---: | :---: |
-| **Read Uncommitted** | ⚠️ Yes | ⚠️ Yes | ⚠️ Yes |
-| **Read Committed** (Postgres default) | ❌ No | ⚠️ Yes | ⚠️ Yes |
-| **Repeatable Read** | ❌ No | ❌ No | ⚠️ Yes (No in Postgres MVCC) |
-| **Serializable** | ❌ No | ❌ No | ❌ No |`,
-    questionsMarkdown: `### Interview Questions
+- Postgres default is **Read Committed** with MVCC.
+- Higher isolation levels reduce concurrency and increase transaction retry rates.`,
+    fullTopic: `# Transaction Isolation Levels & MVCC`,
+    markdownNotes: `# Transaction Isolation Levels & MVCC`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **How does MVCC eliminate read locks in PostgreSQL?**
-   - MVCC creates row version snapshots (\`xmin\`/\`xmax\`), allowing readers not to block writers and writers not to block readers.`,
+1. **How does MVCC prevent read locks?**
+   - Stores multiple row versions (\`xmin\`/\`xmax\`) so readers never block writers.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -833,26 +805,21 @@ SELECT * FROM users WHERE status = 'active';
     learnedAt: today,
     categoryId: 'cat-db',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Replica Set**: Group of MongoDB mongod instances maintaining identical dataset for high availability.
-- **Sharding**: Distributing data across multiple machines using a Shard Key.
-- **Write Concern (\`w: "majority"\`)**: Acknowledgement level requested before a write is confirmed committed.
-- **Aggregation Pipeline**: Multi-stage data transformation framework (\`$match\`, \`$project\`, \`$group\`, \`$unwind\`).`,
-    markdownNotes: `# MongoDB Aggregation & Sharding
+- **Replica Set**: Primary + Secondary nodes for failover.
+- **Sharding**: Horizontal partitioning across machines via Shard Key.
+- **Write Concern**: Confirmation level (\`w: "majority"\`) before write acknowledgment.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-\`\`\`javascript
-db.orders.aggregate([
-  { $match: { status: "completed" } },
-  { $group: { _id: "$customerId", totalSpent: { $sum: "$amount" } } },
-  { $sort: { totalSpent: -1 } },
-  { $limit: 10 }
-]);
-\`\`\``,
-    questionsMarkdown: `### Interview Questions
+- Never use monotonically increasing shard keys (avoids write hotspotting).
+- Always place \`$match\` as early as possible in Aggregation Pipelines.`,
+    fullTopic: `# MongoDB Architecture & Sharding`,
+    markdownNotes: `# MongoDB Architecture & Sharding`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **What happens if you pick a monotonically increasing Shard Key (e.g. timestamp)?**
-   - It causes **hotspotting** where all writes route to a single shard, ruining horizontal write distribution.`,
+1. **What causes hotspotting in MongoDB sharding?**
+   - Monotonic shard keys (like timestamps) sending all writes to one shard.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -868,28 +835,21 @@ db.orders.aggregate([
     learnedAt: today,
     categoryId: 'cat-db',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **EXPLAIN ANALYZE**: Executes query in database and outputs real execution plan with actual node timings and cost metrics.
-- **N+1 Problem**: Executing 1 query for parent records and N additional queries for child relations.
-- **Connection Pool**: Cache of reusable database connections preventing the high cost of TCP + SSL handshakes per request.`,
-    markdownNotes: `# Query Tuning & Optimization
+- **EXPLAIN ANALYZE**: Runs query and prints actual execution node timings.
+- **N+1 Problem**: 1 parent query + N individual child queries.
+- **Connection Pool**: Reusable TCP/DB connection manager (e.g. PgBouncer).`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Solving the N+1 Query Problem:
-\`\`\`sql
--- BAD (N+1 queries in loop)
-SELECT * FROM posts;
--- For each post: SELECT * FROM authors WHERE id = post.author_id;
+- Fix N+1 problems via JOINs, batch \`WHERE IN (...)\`, or DataLoader.
+- Keep connection pool sized close to available CPU cores.`,
+    fullTopic: `# SQL Query Tuning & Optimization`,
+    markdownNotes: `# SQL Query Tuning & Optimization`,
+    questionsMarkdown: `### Top Interview Questions
 
--- GOOD (Batch IN query or JOIN)
-SELECT p.*, a.name AS author_name 
-FROM posts p 
-JOIN authors a ON p.author_id = a.id;
-\`\`\``,
-    questionsMarkdown: `### Interview Questions
-
-1. **What is the difference between \`Seq Scan\` and \`Index Scan\` in EXPLAIN?**
-   - \`Seq Scan\` reads every disk page of the entire table sequentially. \`Index Scan\` traverses the B-Tree directly to target rows.`,
+1. **Index Scan vs Seq Scan:**
+   - Index Scan traverses B-Tree; Seq Scan reads entire table disk blocks sequentially.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -909,26 +869,21 @@ JOIN authors a ON p.author_id = a.id;
     learnedAt: today,
     categoryId: 'cat-sysdesign',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Cache-Aside (Lazy Loading)**: Application reads from cache; on miss, reads DB and writes to cache.
-- **Write-Through**: Application writes to cache, which synchronously writes to database.
-- **Write-Back (Write-Behind)**: Application writes to cache; cache asynchronously persists to DB.
-- **Cache Stampede (Thundering Herd)**: High concurrent requests hitting database simultaneously when a popular key expires.`,
-    markdownNotes: `# Caching Patterns & Eviction Policies
+- **Cache-Aside**: Read cache → on miss read DB and write cache.
+- **Write-Through**: Synchronous cache + DB write.
+- **Cache Stampede**: Mass concurrent DB queries when high-traffic key expires.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Redis Eviction Policies
-- \`allkeys-lru\`: Evicts least recently used keys.
-- \`volatile-lru\`: Evicts LRU keys among keys with TTL set.
-- \`allkeys-lfu\`: Evicts least frequently used keys.
+- Add jitter to TTLs to prevent simultaneous cache stampede expiration.
+- Use Bloom filters to protect against Cache Penetration.`,
+    fullTopic: `# Distributed Caching Architectures`,
+    markdownNotes: `# Distributed Caching Architectures`,
+    questionsMarkdown: `### Top Interview Questions
 
-### Preventing Cache Stampede:
-1. Mutual exclusion mutex locks.
-2. Background refresh with probabilistic early expiration (jitter TTLs).`,
-    questionsMarkdown: `### Interview Questions
-
-1. **How do you prevent Cache Penetration for non-existent keys?**
-   - Use a **Bloom Filter** before cache/DB lookups or cache empty values with a short TTL.`,
+1. **How to protect cache from non-existent key requests?**
+   - Use Bloom filter or cache null values with short TTL.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -944,20 +899,21 @@ JOIN authors a ON p.author_id = a.id;
     learnedAt: today,
     categoryId: 'cat-sysdesign',
     difficulty: 'medium',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **L4 Load Balancer**: Operates at TCP/UDP layer without inspecting packet payload (extremely fast, low latency).
-- **L7 Load Balancer**: Operates at Application layer (HTTP/HTTPS), inspecting headers, cookies, and URLs for smart routing.
-- **Consistent Hashing**: Hashing algorithm mapping keys and nodes to a ring (\(2^{32}\)), minimizing re-shuffling on node addition/removal.`,
-    markdownNotes: `# Load Balancing Architectures
+- **L4 Load Balancer**: Layer 4 TCP/UDP load distribution.
+- **L7 Load Balancer**: Layer 7 HTTP/HTTPS application routing.
+- **Consistent Hashing**: Hash ring mapping keys to servers with minimal re-shuffling.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### L4 vs L7 Comparison
-- **L4 (HAProxy TCP / AWS NLB)**: High throughput, raw TCP forwarding, zero HTTP inspection.
-- **L7 (Nginx / Envoy / AWS ALB)**: SSL/TLS termination, path-based routing (\`/api\` vs \`/static\`), gzip compression, header manipulation.`,
-    questionsMarkdown: `### Interview Questions
+- L4 has raw speed; L7 offers path routing, cookie affinity, and SSL termination.
+- Virtual nodes ensure uniform key distribution in consistent hashing rings.`,
+    fullTopic: `# Load Balancing & Consistent Hashing`,
+    markdownNotes: `# Load Balancing & Consistent Hashing`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **Why do we use Virtual Nodes in Consistent Hashing?**
-   - Virtual nodes distribute keys uniformly across the hash ring, preventing non-uniform load distribution (hotspots).`,
+1. **Why virtual nodes in consistent hashing?**
+   - Prevents hotspots and ensures uniform key distribution.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -973,24 +929,23 @@ JOIN authors a ON p.author_id = a.id;
     learnedAt: today,
     categoryId: 'cat-sysdesign',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Message Queue (RabbitMQ)**: Broker-centric message routing where messages are removed once acknowledged by consumers.
-- **Event Log (Kafka)**: Distributed, partitioned, append-only commit log with consumer-managed offsets and persistent retention.
-- **Dead Letter Queue (DLQ)**: Storage for poison messages that repeatedly fail processing after maximum retries.
-- **Idempotent Consumer**: A consumer where processing the same message multiple times produces the exact same side effects.`,
-    markdownNotes: `# Kafka vs RabbitMQ Architecture
+- **Message Queue (RabbitMQ)**: Broker manages message delivery and deletes on ACK.
+- **Event Log (Kafka)**: Partitioned append-only persistent commit log.
+- **Dead Letter Queue (DLQ)**: Queue holding unprocessable poison messages.
+- **Idempotency**: Processing same message repeatedly yields identical outcome.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-| Feature | RabbitMQ | Apache Kafka |
-| :--- | :--- | :--- |
-| **Model** | Smart broker / Dumb consumer | Dumb broker / Smart consumer |
-| **Persistence** | Deleted after ACK | Persisted in disk log |
-| **Throughput** | ~50k msgs/sec | ~1M+ msgs/sec |
-| **Ordering** | Per-queue | Per-partition |`,
-    questionsMarkdown: `### Interview Questions
+- Use Kafka for high-throughput streaming event pipelines.
+- Use RabbitMQ for complex task routing and work queues.
+- Always use Idempotency Keys to prevent duplicate transactions.`,
+    fullTopic: `# Message Queues & Event Streaming`,
+    markdownNotes: `# Message Queues & Event Streaming`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **How do you guarantee exactly-once processing with an at-least-once message queue?**
-   - Use an **Idempotency Key** stored in Redis/DB with unique constraints, checking before executing business mutations.`,
+1. **How to achieve exactly-once consumer semantics?**
+   - Store processed message IDs in DB with unique constraints inside same transaction.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -1006,20 +961,20 @@ JOIN authors a ON p.author_id = a.id;
     learnedAt: today,
     categoryId: 'cat-sysdesign',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **CAP Theorem**: In a distributed system with Network Partitions (P), you must choose between Consistency (C) or Availability (A).
-- **PACELC Theorem**: If **P**artition: choose **A**vailability or **C**onsistency; **E**lse: choose **L**atency or **C**onsistency.
-- **Split-Brain**: When network partition causes multiple nodes to believe they are the cluster leader, leading to conflicting writes.`,
-    markdownNotes: `# CAP & PACELC Deep Dive
+- **CAP**: Consistency, Availability, Partition Tolerance (choose 2 under partition).
+- **PACELC**: If Partition (P): Availability (A) or Consistency (C); Else (E): Latency (L) or Consistency (C).
+- **Split-Brain**: Cluster partitions causing multiple nodes to claim leadership.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### PACELC Examples:
-- **MongoDB**: PC/EC (Consistent under partition, consistent under normal operation).
-- **Cassandra**: PA/EL (Available under partition, low latency under normal operation).`,
-    questionsMarkdown: `### Interview Questions
+- Network partitions are inevitable; distributed systems choose CP or AP.`,
+    fullTopic: `# CAP & PACELC Distributed Theorems`,
+    markdownNotes: `# CAP & PACELC Distributed Theorems`,
+    questionsMarkdown: `### Top Interview Questions
 
-1. **Why is CA (Consistency + Availability without Partition Tolerance) impossible in real distributed networks?**
-   - Because network cables, switches, and connections can and will fail across data centers.`,
+1. **Why CA systems are impossible over WAN?**
+   - Network links will fail, forcing Partition Tolerance (P).`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -1035,36 +990,20 @@ JOIN authors a ON p.author_id = a.id;
     learnedAt: today,
     categoryId: 'cat-sysdesign',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Token Bucket**: Tokens added at constant rate; requests consume tokens. Allows bursts of traffic up to bucket capacity.
-- **Leaky Bucket**: Requests enter queue and are processed at smooth, steady constant rate.
-- **Sliding Window Counter**: Hybrid algorithm tracking request counts across dynamic sliding time windows in Redis.`,
-    markdownNotes: `# Rate Limiting Algorithms
+- **Token Bucket**: Token fill rate with burst capacity allowance.
+- **Leaky Bucket**: Smooth constant-rate processing queue.
+- **Sliding Window Counter**: Redis-backed dynamic window request limiter.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Distributed Sliding Window in Redis (Lua):
-\`\`\`lua
-local key = KEYS[1]
-local now = tonumber(ARGV[1])
-local window = tonumber(ARGV[2])
-local limit = tonumber(ARGV[3])
-local clearBefore = now - window
+- Always execute Redis rate limiters via **Lua scripts** for atomic operation.`,
+    fullTopic: `# API Gateway & Rate Limiting Algorithms`,
+    markdownNotes: `# API Gateway & Rate Limiting Algorithms`,
+    questionsMarkdown: `### Top Interview Questions
 
-redis.call('ZREMRANGEBYSCORE', key, 0, clearBefore)
-local currentCount = redis.call('ZCARD', key)
-
-if currentCount < limit then
-  redis.call('ZADD', key, now, now)
-  redis.call('EXPIRE', key, math.ceil(window / 1000))
-  return 1 -- Allowed
-else
-  return 0 -- Rejected
-end
-\`\`\``,
-    questionsMarkdown: `### Interview Questions
-
-1. **Why must distributed rate limiters in Redis be executed via Lua scripts?**
-   - Lua scripts execute atomically in Redis, eliminating race conditions between reading and writing counter keys.`,
+1. **Why use Lua scripts in Redis rate limiters?**
+   - Guarantees atomic execution and avoids race conditions.`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -1084,35 +1023,33 @@ end
     learnedAt: today,
     categoryId: 'cat-machine-coding',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Polyfill**: Code that implements a feature on web browsers that do not natively support it.
-- **\`Promise.all\` Polyfill**: Tracks completion counter, returns promise, resolves when counter matches length, rejects immediately on error.`,
-    markdownNotes: `# Core Polyfill Implementations
+- **Polyfill**: Code providing modern features on older browser environments.
+- **\`Promise.all\` Polyfill**: Tracks completion counter, rejects on first error.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### 1. \`Promise.all\` Polyfill
+- Handle non-array inputs, empty arrays, and non-promise values using \`Promise.resolve()\`.`,
+    fullTopic: `# Polyfills: Promise.all Implementation
+
 \`\`\`javascript
 Promise.myAll = function(promises) {
   return new Promise((resolve, reject) => {
-    if (!Array.isArray(promises)) {
-      return reject(new TypeError('Argument must be an array'));
-    }
+    if (!Array.isArray(promises)) return reject(new TypeError('Array required'));
     const results = [];
     let completed = 0;
     if (promises.length === 0) return resolve(results);
 
-    promises.forEach((p, index) => {
-      Promise.resolve(p)
-        .then((val) => {
-          results[index] = val;
-          completed++;
-          if (completed === promises.length) resolve(results);
-        })
-        .catch(reject);
+    promises.forEach((p, i) => {
+      Promise.resolve(p).then((v) => {
+        results[i] = v;
+        if (++completed === promises.length) resolve(results);
+      }).catch(reject);
     });
   });
 };
 \`\`\``,
+    markdownNotes: `# Polyfills: Promise.all Implementation`,
     questionsMarkdown: `### Machine Coding Prompts
 
 1. **Implement \`Function.prototype.myBind\`.**
@@ -1132,32 +1069,32 @@ Promise.myAll = function(promises) {
     learnedAt: today,
     categoryId: 'cat-machine-coding',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Deep Clone**: Recursively copies all properties and nested objects, breaking references.
-- **WeakMap**: Key-value map holding weak references to objects, essential for detecting and resolving circular structures without memory leaks.`,
-    markdownNotes: `# Advanced Utility Implementations
+- **Deep Clone**: Complete recursive copy of objects and nested references.
+- **WeakMap**: Key-value map holding weak object references to detect cycles.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Deep Clone with Circular References
+- Use WeakMap to break infinite loops with circular object structures.`,
+    fullTopic: `# Deep Clone with Circular References
+
 \`\`\`javascript
 function deepClone(obj, hash = new WeakMap()) {
   if (obj === null || typeof obj !== 'object') return obj;
-  if (obj instanceof Date) return new Date(obj);
-  if (obj instanceof RegExp) return new RegExp(obj);
   if (hash.has(obj)) return hash.get(obj);
 
   const clone = Array.isArray(obj) ? [] : {};
   hash.set(obj, clone);
-
-  for (const key of Object.keys(obj)) {
-    clone[key] = deepClone(obj[key], hash);
+  for (const k of Object.keys(obj)) {
+    clone[k] = deepClone(obj[k], hash);
   }
   return clone;
 }
 \`\`\``,
+    markdownNotes: `# Deep Clone with Circular References`,
     questionsMarkdown: `### Machine Coding Prompts
 
-1. **Implement \`debounce\` supporting both \`{ leading: true, trailing: true }\`.**`,
+1. **Implement \`debounce\` supporting \`{ leading: true, trailing: true }\`.**`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -1173,46 +1110,34 @@ function deepClone(obj, hash = new WeakMap()) {
     learnedAt: today,
     categoryId: 'cat-machine-coding',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Event Emitter (Pub/Sub)**: Allows objects to subscribe to named events and receive broadcasts.
-- **LRU Cache**: Cache that discards least recently used items when full, using a Hash Map + Doubly Linked List for \(O(1)\) get and put operations.`,
-    markdownNotes: `# Custom Event Emitter Implementation
+- **Event Emitter**: Pub/sub event broker pattern.
+- **LRU Cache**: Least Recently Used cache with \(O(1)\) get/put operations.`,
+    keyNotes: `### Key Takeaways & Mental Models
+
+- Combine Hash Map + Doubly Linked List for \(O(1)\) LRU operations.`,
+    fullTopic: `# Custom Event Emitter Pattern
 
 \`\`\`javascript
 class EventEmitter {
-  constructor() {
-    this.events = {};
+  constructor() { this.events = {}; }
+  on(e, fn) {
+    (this.events[e] = this.events[e] || []).push(fn);
+    return () => this.off(e, fn);
   }
-
-  on(event, listener) {
-    if (!this.events[event]) this.events[event] = [];
-    this.events[event].push(listener);
-    return () => this.off(event, listener); // Unsubscribe
+  emit(e, ...args) {
+    (this.events[e] || []).forEach(fn => fn(...args));
   }
-
-  emit(event, ...args) {
-    if (!this.events[event]) return;
-    this.events[event].forEach(fn => fn(...args));
-  }
-
-  once(event, listener) {
-    const wrapper = (...args) => {
-      this.off(event, wrapper);
-      listener(...args);
-    };
-    this.on(event, wrapper);
-  }
-
-  off(event, listener) {
-    if (!this.events[event]) return;
-    this.events[event] = this.events[event].filter(fn => fn !== listener);
+  off(e, fn) {
+    this.events[e] = (this.events[e] || []).filter(f => f !== fn);
   }
 }
 \`\`\``,
+    markdownNotes: `# Custom Event Emitter Pattern`,
     questionsMarkdown: `### Machine Coding Prompts
 
-1. **Implement an LRU Cache class with \`get(key)\` and \`put(key, value)\` in \(O(1)\) time.**`,
+1. **Implement an LRU Cache with capacity limit.**`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -1228,34 +1153,32 @@ class EventEmitter {
     learnedAt: today,
     categoryId: 'cat-machine-coding',
     difficulty: 'hard',
-    definitions: `### Key Terminology & Definitions
+    definitions: `### Key Definitions & Terminology
 
-- **Typeahead (Autocomplete)**: Input field suggesting matching items with debounced network calls and keyboard navigation.
-- **IntersectionObserver**: Browser API to detect when an element enters or leaves viewport for performant infinite scrolling.
-- **Recursive Tree Component**: React component rendering its own component definition for nested hierarchies (File Explorer).`,
-    markdownNotes: `# React UI Machine Coding Patterns
+- **IntersectionObserver**: Browser API detecting when elements intersect viewport.
+- **Recursive Component**: Component that renders itself for nested trees.`,
+    keyNotes: `### Key Takeaways & Mental Models
 
-### Infinite Scroll with IntersectionObserver:
+- Use IntersectionObserver instead of scroll event listeners for infinite loading.`,
+    fullTopic: `# React Machine Coding: Infinite Scroll
+
 \`\`\`javascript
 function InfiniteList({ loadMore, hasMore }) {
   const observerRef = useRef();
-
   const lastElementRef = useCallback((node) => {
     if (observerRef.current) observerRef.current.disconnect();
-    observerRef.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore) {
-        loadMore();
-      }
+    observerRef.current = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasMore) loadMore();
     });
     if (node) observerRef.current.observe(node);
   }, [hasMore, loadMore]);
-
   return <div ref={lastElementRef} className="h-4" />;
 }
 \`\`\``,
+    markdownNotes: `# React Machine Coding: Infinite Scroll`,
     questionsMarkdown: `### Machine Coding Prompts
 
-1. **Build a searchable tree-structured File Explorer with Expand/Collapse and Add File/Folder capabilities.**`,
+1. **Build a recursive File Explorer with create/delete folder actions.**`,
     questions: [],
     createdAt: nowIso,
     updatedAt: nowIso,

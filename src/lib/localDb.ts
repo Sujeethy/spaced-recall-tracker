@@ -3,14 +3,14 @@ import { generateSeedData, DEFAULT_SETTINGS, SEED_COURSES } from './seedData'
 import { refreshSessionStatuses, getTodayDateString } from '../services/spacedRecall'
 
 const STORAGE_KEYS = {
-  COURSES: 'recall_tracker_courses_v4',
-  TOPICS: 'recall_tracker_topics_v4',
-  CATEGORIES: 'recall_tracker_categories_v4',
-  TAGS: 'recall_tracker_tags_v4',
-  TOPIC_TAGS: 'recall_tracker_topic_tags_v4',
-  SESSIONS: 'recall_tracker_sessions_v4',
-  SETTINGS: 'recall_tracker_settings_v4',
-  INITIALIZED: 'recall_tracker_initialized_v4',
+  COURSES: 'recall_tracker_courses_v5',
+  TOPICS: 'recall_tracker_topics_v5',
+  CATEGORIES: 'recall_tracker_categories_v5',
+  TAGS: 'recall_tracker_tags_v5',
+  TOPIC_TAGS: 'recall_tracker_topic_tags_v5',
+  SESSIONS: 'recall_tracker_sessions_v5',
+  SETTINGS: 'recall_tracker_settings_v5',
+  INITIALIZED: 'recall_tracker_initialized_v5',
 }
 
 function getItem<T>(key: string, fallback: T): T {

@@ -18,6 +18,7 @@ import {
   HelpCircle,
   FileText,
   Bookmark,
+  FileCode,
 } from 'lucide-react'
 
 interface TopicFormProps {
@@ -54,7 +55,10 @@ export function TopicForm({
 
   const [newCatName, setNewCatName] = useState('')
   const [showNewCatInput, setShowNewCatInput] = useState(false)
-  const [activeNotesTab, setActiveNotesTab] = useState<'full' | 'definitions' | 'questions'>('full')
+  const [activeNotesTab, setActiveNotesTab] = useState<'full' | 'keyNotes' | 'definitions' | 'questions'>('full')
+
+  const initialFullTopic = initialData?.fullTopic || initialData?.markdownNotes || ''
+  const initialKeyNotes = initialData?.keyNotes || initialData?.notes || ''
 
   const form = useForm<TopicFormValues>({
     resolver: zodResolver(topicFormSchema),
@@ -69,8 +73,10 @@ export function TopicForm({
       difficulty: initialData?.difficulty || 'medium',
       chatgptUrl: initialData?.chatgptUrl || '',
       description: initialData?.description || '',
-      notes: initialData?.notes || '',
-      markdownNotes: initialData?.markdownNotes || '',
+      fullTopic: initialFullTopic,
+      keyNotes: initialKeyNotes,
+      notes: initialKeyNotes,
+      markdownNotes: initialFullTopic,
       definitions: initialData?.definitions || '',
       questionsMarkdown: initialData?.questionsMarkdown || '',
       tags: initialData?.tags?.map((t) => t.name).join(', ') || '',
@@ -89,7 +95,8 @@ export function TopicForm({
   const watchedStatus = watch('status')
   const watchedCompletedAt = watch('completedAt')
   const watchedDifficulty = watch('difficulty')
-  const watchedMarkdown = watch('markdownNotes') || ''
+  const watchedFullTopic = watch('fullTopic') || ''
+  const watchedKeyNotes = watch('keyNotes') || ''
   const watchedDefinitions = watch('definitions') || ''
   const watchedQuestionsMarkdown = watch('questionsMarkdown') || ''
 
@@ -114,10 +121,17 @@ export function TopicForm({
   }
 
   const onSubmit = async (values: TopicFormValues) => {
+    // Keep legacy aliases synced
+    const finalValues = {
+      ...values,
+      markdownNotes: values.fullTopic,
+      notes: values.keyNotes,
+    }
+
     if (initialData) {
-      await updateTopicMutation.mutateAsync({ id: initialData.id, values })
+      await updateTopicMutation.mutateAsync({ id: initialData.id, values: finalValues })
     } else {
-      await createTopicMutation.mutateAsync(values)
+      await createTopicMutation.mutateAsync(finalValues)
     }
     onSuccess?.()
   }
@@ -129,7 +143,7 @@ export function TopicForm({
           {initialData ? 'Edit Topic' : 'Add New Topic'}
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Define topic details, rich markdown study notes, definitions, and interview questions.
+          Define topic details and 4 dedicated Markdown study sections (Full Topic, Key Notes, Definitions, Questions).
         </p>
       </div>
 
@@ -308,31 +322,44 @@ export function TopicForm({
         </div>
       </div>
 
-      {/* 3 Markdown Study Sections: Full Topic, Definitions, Questions */}
+      {/* 4 Markdown Study Sections: Full Topic, Key Notes, Definitions, Questions */}
       <div className="space-y-3 p-4 rounded-2xl border bg-card/60">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2.5">
           <span className="text-xs font-bold text-foreground">
-            Markdown Study & Recall Content
+            Markdown Study & Recall Content (4 Fields)
           </span>
           {/* Section Switcher Tabs */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60">
+          <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-muted/60">
             <button
               type="button"
               onClick={() => setActiveNotesTab('full')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
                 activeNotesTab === 'full'
                   ? 'bg-card text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <FileText className="w-3.5 h-3.5 text-primary" />
-              Full Topic Notes
+              <FileCode className="w-3.5 h-3.5 text-primary" />
+              Full Topic
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveNotesTab('keyNotes')}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                activeNotesTab === 'keyNotes'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-500" />
+              Key Notes
             </button>
 
             <button
               type="button"
               onClick={() => setActiveNotesTab('definitions')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
                 activeNotesTab === 'definitions'
                   ? 'bg-card text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -345,7 +372,7 @@ export function TopicForm({
             <button
               type="button"
               onClick={() => setActiveNotesTab('questions')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
                 activeNotesTab === 'questions'
                   ? 'bg-card text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -361,18 +388,39 @@ export function TopicForm({
         {activeNotesTab === 'full' && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Comprehensive explanations, architecture diagrams, code blocks & deep dives</span>
+              <span>Comprehensive deep dive, architecture diagrams, step-by-step guides, code implementations</span>
             </div>
             <MarkdownEditor
-              value={watchedMarkdown}
-              onChange={(val) => setValue('markdownNotes', val, { shouldDirty: true })}
-              placeholder="Write comprehensive topic notes, deep dive explanations, code examples..."
+              value={watchedFullTopic}
+              onChange={(val) => {
+                setValue('fullTopic', val, { shouldDirty: true })
+                setValue('markdownNotes', val, { shouldDirty: true })
+              }}
+              placeholder="Write full comprehensive topic notes, deep dive explanations, code examples..."
               rows={8}
             />
           </div>
         )}
 
-        {/* Tab 2: Definitions */}
+        {/* Tab 2: Key Notes */}
+        {activeNotesTab === 'keyNotes' && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Quick key takeaways, bullet points, mental models, must-remember summaries</span>
+            </div>
+            <MarkdownEditor
+              value={watchedKeyNotes}
+              onChange={(val) => {
+                setValue('keyNotes', val, { shouldDirty: true })
+                setValue('notes', val, { shouldDirty: true })
+              }}
+              placeholder="### Key Takeaways & Mental Models&#10;&#10;- **Takeaway 1**: ...&#10;- **Takeaway 2**: ..."
+              rows={8}
+            />
+          </div>
+        )}
+
+        {/* Tab 3: Definitions */}
         {activeNotesTab === 'definitions' && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -387,7 +435,7 @@ export function TopicForm({
           </div>
         )}
 
-        {/* Tab 3: Questions */}
+        {/* Tab 4: Questions */}
         {activeNotesTab === 'questions' && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground">

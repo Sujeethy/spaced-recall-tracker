@@ -173,6 +173,8 @@ export const api = {
     const nowIso = new Date().toISOString()
     const topicId = crypto.randomUUID()
 
+    const fullTopicContent = values.fullTopic?.trim() || values.markdownNotes?.trim() || ''
+    const keyNotesContent = values.keyNotes?.trim() || values.notes?.trim() || ''
     const effectiveCompletedAt = values.status === 'completed' ? (values.completedAt || today) : null
 
     const newTopic: Topic = {
@@ -181,8 +183,10 @@ export const api = {
       orderIndex: values.orderIndex !== undefined ? values.orderIndex : 0,
       title: values.title.trim(),
       description: values.description?.trim() || '',
-      notes: values.notes?.trim() || '',
-      markdownNotes: values.markdownNotes?.trim() || '',
+      fullTopic: fullTopicContent,
+      keyNotes: keyNotesContent,
+      notes: keyNotesContent,
+      markdownNotes: fullTopicContent,
       definitions: values.definitions?.trim() || '',
       questionsMarkdown: values.questionsMarkdown?.trim() || '',
       status: values.status || 'yet_to_start',
@@ -254,14 +258,19 @@ export const api = {
       updatedCompletedAt = null
     }
 
+    const updatedFullTopic = values.fullTopic !== undefined ? values.fullTopic : (values.markdownNotes !== undefined ? values.markdownNotes : current.fullTopic || current.markdownNotes || '')
+    const updatedKeyNotes = values.keyNotes !== undefined ? values.keyNotes : (values.notes !== undefined ? values.notes : current.keyNotes || current.notes || '')
+
     const updated: Topic = {
       ...current,
       title: values.title !== undefined ? values.title.trim() : current.title,
       courseId: values.courseId !== undefined ? values.courseId : current.courseId,
       orderIndex: values.orderIndex !== undefined ? values.orderIndex : current.orderIndex,
       description: values.description !== undefined ? values.description : current.description,
-      notes: values.notes !== undefined ? values.notes : current.notes,
-      markdownNotes: values.markdownNotes !== undefined ? values.markdownNotes : current.markdownNotes,
+      fullTopic: updatedFullTopic,
+      keyNotes: updatedKeyNotes,
+      notes: updatedKeyNotes,
+      markdownNotes: updatedFullTopic,
       definitions: values.definitions !== undefined ? values.definitions : current.definitions,
       questionsMarkdown: values.questionsMarkdown !== undefined ? values.questionsMarkdown : current.questionsMarkdown,
       status: updatedStatus,
@@ -595,7 +604,9 @@ function formatSupabaseTopic(raw: any): TopicWithDetails {
     title: raw.title,
     description: raw.description,
     notes: raw.notes,
-    markdownNotes: raw.markdown_notes || '',
+    keyNotes: raw.key_notes || raw.notes || '',
+    fullTopic: raw.full_topic || raw.markdown_notes || '',
+    markdownNotes: raw.markdown_notes || raw.full_topic || '',
     definitions: raw.definitions || '',
     questionsMarkdown: raw.questions_markdown || '',
     status: raw.status || 'yet_to_start',
