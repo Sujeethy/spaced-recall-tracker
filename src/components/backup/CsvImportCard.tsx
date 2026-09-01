@@ -54,6 +54,7 @@ export function CsvImportCard() {
           await api.createTopic({
             title: topic.title,
             orderIndex: 0,
+            status: 'yet_to_start',
             description: topic.description || '',
             notes: topic.notes || '',
             markdownNotes: '',

@@ -1,5 +1,5 @@
 import type { TopicWithDetails } from '../../types'
-import { DifficultyBadge } from '../common/Badge'
+import { DifficultyBadge, TopicStatusBadge } from '../common/Badge'
 import { Link } from '@tanstack/react-router'
 import { Calendar, Zap, ExternalLink } from 'lucide-react'
 import { useUIStore } from '../../store/useUIStore'
@@ -45,7 +45,10 @@ export function TopicCard({ topic }: TopicCardProps) {
               <span className="text-[11px] text-muted-foreground">General</span>
             )}
           </div>
-          <DifficultyBadge difficulty={topic.difficulty} />
+          <div className="flex items-center gap-1.5">
+            <TopicStatusBadge status={topic.status} />
+            <DifficultyBadge difficulty={topic.difficulty} />
+          </div>
         </div>
 
         <Link

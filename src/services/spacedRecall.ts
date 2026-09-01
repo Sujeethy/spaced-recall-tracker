@@ -15,6 +15,13 @@ export function getTodayDateString(): string {
 }
 
 /**
+ * Returns yesterday's date in local calendar YYYY-MM-DD format
+ */
+export function getYesterdayDateString(): string {
+  return addDaysToDateString(getTodayDateString(), -1)
+}
+
+/**
  * Pure timezone-safe date addition
  * Adding N days to a YYYY-MM-DD date string using UTC arithmetic to eliminate DST/timezone shifts
  */

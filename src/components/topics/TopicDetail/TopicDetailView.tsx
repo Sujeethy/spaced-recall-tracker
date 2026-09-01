@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from '@tanstack/react-router'
 import { useTopic, useDeleteTopic } from '../../../hooks/useTopics'
 import { RecallHistoryTable } from './RecallHistoryTable'
-import { DifficultyBadge } from '../../common/Badge'
+import { DifficultyBadge, TopicStatusBadge } from '../../common/Badge'
 import { ConfirmDialog } from '../../common/ConfirmDialog'
 import { MarkdownRenderer } from '../../common/MarkdownRenderer'
 import { useUIStore } from '../../../store/useUIStore'
@@ -142,11 +142,19 @@ export function TopicDetailView() {
               {topic.category.name}
             </span>
           )}
+          <TopicStatusBadge status={topic.status} />
           <DifficultyBadge difficulty={topic.difficulty} />
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Learned on {topic.learnedAt}</span>
-          </span>
+          {topic.status === 'completed' && topic.completedAt ? (
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Completed on {topic.completedAt}</span>
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Target: {topic.learnedAt}</span>
+            </span>
+          )}
         </div>
 
         <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
@@ -202,13 +210,13 @@ export function TopicDetailView() {
         </div>
       </div>
 
-      {/* Rich Markdown Notes (ChatGPT Response Quick-Recall) */}
+      {/* Comprehensive Study Notes (Markdown) */}
       {topic.markdownNotes && (
         <div className="p-6 rounded-2xl border bg-card/60 space-y-3 shadow-sm">
           <div className="flex items-center gap-2 pb-2 border-b">
             <FileText className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-bold text-foreground">
-              Quick Recall Notes & ChatGPT Summary
+              Comprehensive Study Notes & Explanations
             </h2>
           </div>
           <MarkdownRenderer content={topic.markdownNotes} />

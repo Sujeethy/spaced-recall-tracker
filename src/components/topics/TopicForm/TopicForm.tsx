@@ -1,15 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { topicFormSchema, type TopicFormValues, type TopicWithDetails } from '../../../types'
-import { getTodayDateString } from '../../../services/spacedRecall'
+import { topicFormSchema, type TopicFormValues, type TopicWithDetails, type TopicStatus } from '../../../types'
+import { getTodayDateString, getYesterdayDateString } from '../../../services/spacedRecall'
 import { useCreateTopic, useUpdateTopic } from '../../../hooks/useTopics'
 import { useCategories, useCreateCategory } from '../../../hooks/useCategories'
 import { useCourses } from '../../../hooks/useCourses'
 import { SchedulePreviewTable } from './SchedulePreviewTable'
 import { QuestionBuilder } from './QuestionBuilder'
 import { MarkdownEditor } from '../../common/MarkdownEditor'
-import { Plus, Tag as TagIcon, ExternalLink, GraduationCap, FileText } from 'lucide-react'
+import { Plus, Tag as TagIcon, ExternalLink, GraduationCap, BookOpen, CheckCircle2 } from 'lucide-react'
 
 interface TopicFormProps {
   initialData?: TopicWithDetails
@@ -19,6 +19,14 @@ interface TopicFormProps {
   onCancel?: () => void
 }
 
+const STATUS_OPTIONS: { value: TopicStatus; label: string }[] = [
+  { value: 'yet_to_start', label: 'Yet to Start' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'skipped', label: 'Skipped' },
+]
+
 export function TopicForm({
   initialData,
   initialCourseId,
@@ -27,6 +35,8 @@ export function TopicForm({
   onCancel,
 }: TopicFormProps) {
   const today = getTodayDateString()
+  const yesterday = getYesterdayDateString()
+
   const { data: categories = [] } = useCategories()
   const { data: courses = [] } = useCourses()
   const createCategoryMutation = useCreateCategory()
@@ -42,6 +52,8 @@ export function TopicForm({
       title: initialData?.title || '',
       courseId: initialData?.courseId || initialCourseId || null,
       orderIndex: initialData?.orderIndex ?? initialOrderIndex ?? 0,
+      status: initialData?.status || 'yet_to_start',
+      completedAt: initialData?.completedAt || (initialData?.status === 'completed' ? today : null),
       learnedAt: initialData?.learnedAt || today,
       categoryId: initialData?.categoryId || categories[0]?.id || '',
       difficulty: initialData?.difficulty || 'medium',
@@ -62,9 +74,18 @@ export function TopicForm({
     formState: { errors, isSubmitting },
   } = form
 
+  const watchedStatus = watch('status')
+  const watchedCompletedAt = watch('completedAt')
   const watchedLearnedAt = watch('learnedAt')
   const watchedDifficulty = watch('difficulty')
   const watchedMarkdown = watch('markdownNotes') || ''
+
+  // If status transitions to completed, default completedAt to today if unset
+  useEffect(() => {
+    if (watchedStatus === 'completed' && !watchedCompletedAt) {
+      setValue('completedAt', today, { shouldDirty: true })
+    }
+  }, [watchedStatus, watchedCompletedAt, setValue, today])
 
   const fieldArray = useFieldArray({
     control: form.control,
@@ -97,7 +118,7 @@ export function TopicForm({
         </label>
         <input
           {...register('title')}
-          placeholder="e.g. PostgreSQL Index Types & EXPLAIN ANALYZE"
+          placeholder="e.g. Execution Context & Memory: Call Stack, Heap"
           className="w-full px-3.5 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
         {errors.title && (
@@ -111,7 +132,7 @@ export function TopicForm({
         <div>
           <label className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
             <GraduationCap className="w-3.5 h-3.5 text-primary" />
-            <span>Course / Track</span>
+            <span>Course / Domain Track</span>
           </label>
           <select
             {...register('courseId')}
@@ -171,22 +192,70 @@ export function TopicForm({
         </div>
       </div>
 
-      {/* Row: Learned Date + Difficulty */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Row: Status & Completion Date */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 rounded-xl border bg-muted/20">
         <div>
           <label className="text-xs font-semibold text-foreground block mb-1">
-            Learned Date <span className="text-rose-500">*</span>
+            Study Status
           </label>
-          <input
-            type="date"
-            {...register('learnedAt')}
-            className="w-full px-3 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          {errors.learnedAt && (
-            <p className="text-[11px] text-rose-500 mt-1">{errors.learnedAt.message}</p>
-          )}
+          <select
+            {...register('status')}
+            className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
 
+        {watchedStatus === 'completed' ? (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Completed Date</span>
+              </label>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setValue('completedAt', today, { shouldDirty: true })}
+                  className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/30"
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValue('completedAt', yesterday, { shouldDirty: true })}
+                  className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted hover:bg-muted/80 text-foreground border"
+                >
+                  Yesterday
+                </button>
+              </div>
+            </div>
+            <input
+              type="date"
+              {...register('completedAt')}
+              className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        ) : (
+          <div>
+            <label className="text-xs font-semibold text-foreground block mb-1">
+              Target / Scheduled Date
+            </label>
+            <input
+              type="date"
+              {...register('learnedAt')}
+              className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Row: Difficulty + ChatGPT Link */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="text-xs font-semibold text-foreground block mb-1.5">
             Difficulty Level
@@ -208,31 +277,31 @@ export function TopicForm({
             ))}
           </div>
         </div>
+
+        <div>
+          <label className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
+            <ExternalLink className="w-3 h-3 text-muted-foreground" />
+            <span>ChatGPT / Claude Link (Optional)</span>
+          </label>
+          <input
+            {...register('chatgptUrl')}
+            placeholder="https://chatgpt.com/c/..."
+            className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
       </div>
 
-      {/* ChatGPT External Link */}
-      <div>
-        <label className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
-          <ExternalLink className="w-3 h-3 text-muted-foreground" />
-          <span>ChatGPT / Claude Conversation Link (Optional)</span>
-        </label>
-        <input
-          {...register('chatgptUrl')}
-          placeholder="https://chatgpt.com/c/..."
-          className="w-full px-3 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
-
-      {/* Markdown Notes (ChatGPT Response / Quick Recall Content) */}
+      {/* Comprehensive Study Notes (Markdown) */}
       <div className="space-y-1">
-        <label className="text-xs font-semibold text-foreground flex items-center gap-1">
-          <FileText className="w-3.5 h-3.5 text-primary" />
-          <span>Markdown Quick-Recall Notes (Paste ChatGPT Output / Code / Formulas)</span>
+        <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          <BookOpen className="w-3.5 h-3.5 text-primary" />
+          <span>Comprehensive Study Notes & Explanations (Markdown)</span>
         </label>
         <MarkdownEditor
           value={watchedMarkdown}
-          onChange={(val) => setValue('markdownNotes', val)}
-          rows={6}
+          onChange={(val) => setValue('markdownNotes', val, { shouldDirty: true })}
+          placeholder="Write your study notes, code examples, interview takeaways, architecture explanations in Markdown..."
+          rows={8}
         />
       </div>
 
@@ -244,8 +313,8 @@ export function TopicForm({
         </label>
         <input
           {...register('tags')}
-          placeholder="postgres, indexing, sql-tuning"
-          className="w-full px-3 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          placeholder="javascript, event-loop, interview-sprint"
+          className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
@@ -273,7 +342,7 @@ export function TopicForm({
           disabled={isSubmitting}
           className="px-5 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 shadow-sm transition-opacity"
         >
-          {initialData ? 'Save Changes' : 'Save Topic & Schedule Recalls'}
+          {initialData ? 'Save Changes' : 'Save Topic'}
         </button>
       </div>
     </form>

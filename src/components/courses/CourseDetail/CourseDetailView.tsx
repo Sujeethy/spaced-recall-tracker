@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from '@tanstack/react-router'
 import { useCourse, useDeleteCourse, useReorderTopicsInCourse } from '../../../hooks/useCourses'
 import { useTopics } from '../../../hooks/useTopics'
 import { TopicOrderRow } from './TopicOrderRow'
+import { CourseRevisionGuide } from './CourseRevisionGuide'
 import { CourseFormModal } from '../CourseFormModal'
 import { TopicForm } from '../../topics/TopicForm/TopicForm'
 import { ConfirmDialog } from '../../common/ConfirmDialog'
@@ -19,6 +20,8 @@ import {
   Edit,
   Trash2,
   Plus,
+  ListOrdered,
+  BookMarked,
 } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { TopicWithDetails } from '../../../types'
@@ -43,6 +46,7 @@ export function CourseDetailView() {
   const deleteCourseMutation = useDeleteCourse()
   const reorderMutation = useReorderTopicsInCourse()
 
+  const [activeTab, setActiveTab] = useState<'curriculum' | 'revision'>('curriculum')
   const [isEditCourseOpen, setIsEditCourseOpen] = useState(false)
   const [isDeleteCourseOpen, setIsDeleteCourseOpen] = useState(false)
   const [deleteTopicsCascade, setDeleteTopicsCascade] = useState(false)
@@ -75,6 +79,10 @@ export function CourseDetailView() {
   const courseTopics = allTopics
     .filter((t) => t.courseId === course.id)
     .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+
+  const completedCount = courseTopics.filter((t) => t.status === 'completed').length
+  const remainingCount = courseTopics.length - completedCount
+  const progressPct = courseTopics.length === 0 ? 0 : Math.round((completedCount / courseTopics.length) * 100)
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1
@@ -146,23 +154,24 @@ export function CourseDetailView() {
             onClick={() => setIsAddTopicOpen(true)}
             className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 flex items-center justify-center gap-1.5 shadow-sm shrink-0"
           >
-            <Plus className="w-4 h-4" /> Add Topic to Course
+            <Plus className="w-4 h-4" /> Add Topic
           </button>
         </div>
 
-        {/* Progress bar */}
+        {/* Progress Bar & Statistics */}
         <div className="pt-2 border-t space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
-              {courseTopics.length} Curriculum Topics • {course.completedRecallCount}/{course.totalRecallCount} Total Recalls
+              <strong className="text-foreground">{completedCount}</strong> of {courseTopics.length} topics completed •{' '}
+              <span className="text-amber-600 dark:text-amber-400 font-semibold">{remainingCount} left to complete</span>
             </span>
-            <span className="font-bold text-foreground">{course.progressPercentage}% Mastered</span>
+            <span className="font-bold text-foreground">{progressPct}%</span>
           </div>
           <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-300"
               style={{
-                width: `${course.progressPercentage}%`,
+                width: `${progressPct}%`,
                 backgroundColor: course.color,
               }}
             />
@@ -170,36 +179,72 @@ export function CourseDetailView() {
         </div>
       </div>
 
-      {/* Curriculum Topics Ordered List */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-foreground">Curriculum Topics ({courseTopics.length})</h2>
-          <span className="text-xs text-muted-foreground">Use arrows to reorder learning sequence</span>
-        </div>
+      {/* Tab Switcher: Curriculum vs Comprehensive Revision Guide */}
+      <div className="flex items-center gap-2 border-b pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('curriculum')}
+          className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
+            activeTab === 'curriculum'
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+          }`}
+        >
+          <ListOrdered className="w-4 h-4" />
+          Curriculum & Reorder ({courseTopics.length})
+        </button>
 
-        {courseTopics.length === 0 ? (
-          <EmptyState
-            title="No topics in this course yet"
-            description="Start building your learning curriculum by adding technical topics to this course."
-            actionLabel="Add First Topic"
-            onAction={() => setIsAddTopicOpen(true)}
-          />
-        ) : (
-          <div className="space-y-2.5">
-            {courseTopics.map((topic, index) => (
-              <TopicOrderRow
-                key={topic.id}
-                topic={topic}
-                index={index}
-                totalTopics={courseTopics.length}
-                onMoveUp={() => handleMove(index, 'up')}
-                onMoveDown={() => handleMove(index, 'down')}
-                onEdit={(t) => setEditingTopic(t)}
-              />
-            ))}
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => setActiveTab('revision')}
+          className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
+            activeTab === 'revision'
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+          }`}
+        >
+          <BookMarked className="w-4 h-4" />
+          📖 Full Revision Guide (All Notes)
+        </button>
       </div>
+
+      {/* View Content */}
+      {activeTab === 'curriculum' ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-foreground">Curriculum Topics ({courseTopics.length})</h2>
+            <span className="text-xs text-muted-foreground">Use arrows to reorder learning sequence</span>
+          </div>
+
+          {courseTopics.length === 0 ? (
+            <EmptyState
+              title="No topics in this course yet"
+              description="Start building your learning curriculum by adding technical topics to this course."
+              actionLabel="Add First Topic"
+              onAction={() => setIsAddTopicOpen(true)}
+            />
+          ) : (
+            <div className="space-y-2.5">
+              {courseTopics.map((topic, index) => (
+                <TopicOrderRow
+                  key={topic.id}
+                  topic={topic}
+                  index={index}
+                  totalTopics={courseTopics.length}
+                  onMoveUp={() => handleMove(index, 'up')}
+                  onMoveDown={() => handleMove(index, 'down')}
+                  onEdit={(t) => setEditingTopic(t)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <CourseRevisionGuide
+          topics={courseTopics}
+          onEditTopic={(t) => setEditingTopic(t)}
+        />
+      )}
 
       {/* Edit Course Modal */}
       <CourseFormModal

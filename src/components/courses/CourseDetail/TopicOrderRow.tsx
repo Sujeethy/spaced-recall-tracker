@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { TopicWithDetails } from '../../../types'
-import { DifficultyBadge } from '../../common/Badge'
+import { DifficultyBadge, TopicStatusBadge } from '../../common/Badge'
 import { Link } from '@tanstack/react-router'
 import {
   ChevronUp,
@@ -82,6 +82,7 @@ export function TopicOrderRow({
             >
               {topic.title}
             </Link>
+            <TopicStatusBadge status={topic.status} />
             <DifficultyBadge difficulty={topic.difficulty} />
           </div>
 

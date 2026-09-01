@@ -9,7 +9,6 @@ import {
   Server,
   Code,
   Sparkles,
-  Calendar,
   MoreVertical,
   Edit2,
   Trash2,
@@ -115,14 +114,13 @@ export function CourseCard({ course, onEdit }: CourseCardProps) {
         </div>
 
         {/* Progress & Bottom Info */}
-        <div className="pt-4 mt-4 border-t space-y-3">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Next: {course.nextRecallDate || 'No pending recalls'}</span>
-            </span>
+        <div className="pt-4 mt-4 border-t space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-foreground">
-              {course.progressPercentage}% Mastered
+              {course.topicsCompletedCount || 0} of {course.topicsCount} topics completed
+            </span>
+            <span className="font-bold text-primary">
+              {course.progressPercentage}%
             </span>
           </div>
 
@@ -136,17 +134,17 @@ export function CourseCard({ course, onEdit }: CourseCardProps) {
             />
           </div>
 
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-muted-foreground font-medium">
-              {course.completedRecallCount}/{course.totalRecallCount} recalls done
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
+            <span className="font-medium text-amber-600 dark:text-amber-400">
+              {course.topicsRemainingCount || 0} left to complete
             </span>
 
             <Link
               to="/courses/$courseId"
               params={{ courseId: course.id }}
-              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+              className="font-semibold text-primary hover:underline flex items-center gap-1"
             >
-              Curriculum <ArrowRight className="w-3.5 h-3.5" />
+              Curriculum & Notes <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
         </div>

@@ -180,6 +180,8 @@ export const api = {
       description: values.description?.trim() || '',
       notes: values.notes?.trim() || '',
       markdownNotes: values.markdownNotes?.trim() || '',
+      status: values.status || 'yet_to_start',
+      completedAt: values.completedAt || (values.status === 'completed' ? today : null),
       learnedAt: values.learnedAt || today,
       categoryId: values.categoryId,
       difficulty: values.difficulty || 'medium',
@@ -239,6 +241,8 @@ export const api = {
       description: values.description !== undefined ? values.description : current.description,
       notes: values.notes !== undefined ? values.notes : current.notes,
       markdownNotes: values.markdownNotes !== undefined ? values.markdownNotes : current.markdownNotes,
+      status: values.status !== undefined ? values.status : current.status || 'yet_to_start',
+      completedAt: values.completedAt !== undefined ? values.completedAt : current.completedAt,
       learnedAt: values.learnedAt !== undefined ? values.learnedAt : current.learnedAt,
       categoryId: values.categoryId !== undefined ? values.categoryId : current.categoryId,
       difficulty: values.difficulty !== undefined ? values.difficulty : current.difficulty,
@@ -457,7 +461,12 @@ function enrichCourse(course: Course, topics: TopicWithDetails[]): CourseWithDet
   const courseTopics = topics.filter(t => t.courseId === course.id)
   const totalRecalls = courseTopics.reduce((acc, t) => acc + t.totalRecallCount, 0)
   const completedRecalls = courseTopics.reduce((acc, t) => acc + t.completedRecallCount, 0)
-  const progressPercentage = totalRecalls === 0 ? 0 : Math.round((completedRecalls / totalRecalls) * 100)
+  
+  const topicsCompletedCount = courseTopics.filter(t => t.status === 'completed').length
+  const topicsRemainingCount = courseTopics.length - topicsCompletedCount
+  const progressPercentage = courseTopics.length === 0
+    ? 0
+    : Math.round((topicsCompletedCount / courseTopics.length) * 100)
 
   // Find earliest upcoming/due recall date
   const nextDates = courseTopics
@@ -469,6 +478,8 @@ function enrichCourse(course: Course, topics: TopicWithDetails[]): CourseWithDet
   return {
     ...course,
     topicsCount: courseTopics.length,
+    topicsCompletedCount,
+    topicsRemainingCount,
     completedRecallCount: completedRecalls,
     totalRecallCount: totalRecalls,
     progressPercentage,
@@ -496,6 +507,8 @@ function enrichTopic(
 
   return {
     ...topic,
+    status: topic.status || 'yet_to_start',
+    completedAt: topic.completedAt || null,
     category,
     course,
     tags: matchingTags,
@@ -528,9 +541,14 @@ function formatSupabaseTopic(raw: any): TopicWithDetails {
 
   return {
     id: raw.id,
+    courseId: raw.course_id || null,
+    orderIndex: raw.order_index || 0,
     title: raw.title,
     description: raw.description,
     notes: raw.notes,
+    markdownNotes: raw.markdown_notes || '',
+    status: raw.status || 'yet_to_start',
+    completedAt: raw.completed_at || null,
     learnedAt: raw.learned_at,
     categoryId: raw.category_id,
     difficulty: raw.difficulty,

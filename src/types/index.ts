@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export type RecallStatus = 'upcoming' | 'due' | 'completed' | 'overdue' | 'skipped' | 'rescheduled'
 export type TopicDifficulty = 'easy' | 'medium' | 'hard'
+export type TopicStatus = 'yet_to_start' | 'in_progress' | 'completed' | 'draft' | 'skipped'
 export type ThemeMode = 'light' | 'dark' | 'system'
 
 export interface Course {
@@ -17,6 +18,8 @@ export interface Course {
 
 export interface CourseWithDetails extends Course {
   topicsCount: number
+  topicsCompletedCount: number
+  topicsRemainingCount: number
   completedRecallCount: number
   totalRecallCount: number
   progressPercentage: number
@@ -40,6 +43,8 @@ export interface Topic {
   description?: string
   notes?: string
   markdownNotes?: string
+  status: TopicStatus
+  completedAt?: string | null
   learnedAt: string // Format: YYYY-MM-DD
   categoryId: string
   difficulty: TopicDifficulty
@@ -123,6 +128,8 @@ export const topicFormSchema = z.object({
   title: z.string().min(1, 'Topic name is required'),
   courseId: z.string().nullable().optional(),
   orderIndex: z.number().optional().default(0),
+  status: z.enum(['yet_to_start', 'in_progress', 'completed', 'draft', 'skipped']).default('yet_to_start'),
+  completedAt: z.string().nullable().optional(),
   learnedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid date YYYY-MM-DD is required'),
   categoryId: z.string().min(1, 'Please select or create a category'),
   difficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
@@ -137,9 +144,9 @@ export const topicFormSchema = z.object({
       question: z.string().min(1, 'Question text required'),
       answer: z.string().min(1, 'Answer text required'),
       correctCount: z.number().default(0),
-      incorrectCount: z.number().default(0)
+      incorrectCount: z.number().default(0),
     })
-  ).default([])
+  ).default([]),
 })
 
 export type TopicFormValues = z.infer<typeof topicFormSchema>
