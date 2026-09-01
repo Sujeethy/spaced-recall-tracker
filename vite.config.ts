@@ -6,6 +6,7 @@ import path from 'path'
 const isTest = process.env.VITEST !== undefined
 
 export default defineConfig({
+  base: './',
   plugins: [
     react({
       babel: {
