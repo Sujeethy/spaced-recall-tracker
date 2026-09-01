@@ -2,6 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import {
   LayoutDashboard,
   Clock,
+  GraduationCap,
   BookOpen,
   Calendar,
   History,
@@ -16,6 +17,7 @@ import clsx from 'clsx'
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/today', label: 'Today', icon: Clock, showBadge: true },
+  { to: '/courses', label: 'Courses', icon: GraduationCap },
   { to: '/topics', label: 'Topics', icon: BookOpen },
   { to: '/calendar', label: 'Calendar', icon: Calendar },
   { to: '/log', label: 'Learning Log', icon: History },

@@ -1,8 +1,9 @@
-import type { Topic, Category, Tag, TopicTag, RecallSession, Settings } from '../types'
-import { generateSeedData, DEFAULT_SETTINGS } from './seedData'
+import type { Topic, Category, Course, Tag, TopicTag, RecallSession, Settings } from '../types'
+import { generateSeedData, DEFAULT_SETTINGS, SEED_COURSES } from './seedData'
 import { refreshSessionStatuses, getTodayDateString } from '../services/spacedRecall'
 
 const STORAGE_KEYS = {
+  COURSES: 'recall_tracker_courses_v1',
   TOPICS: 'recall_tracker_topics_v1',
   CATEGORIES: 'recall_tracker_categories_v1',
   TAGS: 'recall_tracker_tags_v1',
@@ -33,10 +34,15 @@ function setItem<T>(key: string, val: T): void {
 export function initializeLocalDatabase(forceReset: boolean = false): void {
   const isInitialized = localStorage.getItem(STORAGE_KEYS.INITIALIZED)
   if (isInitialized && !forceReset) {
+    // If courses key doesn't exist yet in an existing install, seed courses
+    if (!localStorage.getItem(STORAGE_KEYS.COURSES)) {
+      setItem(STORAGE_KEYS.COURSES, SEED_COURSES)
+    }
     return
   }
 
   const seed = generateSeedData()
+  setItem(STORAGE_KEYS.COURSES, seed.courses)
   setItem(STORAGE_KEYS.TOPICS, seed.topics)
   setItem(STORAGE_KEYS.CATEGORIES, seed.categories)
   setItem(STORAGE_KEYS.TAGS, seed.tags)
@@ -50,6 +56,19 @@ export function initializeLocalDatabase(forceReset: boolean = false): void {
 initializeLocalDatabase()
 
 export const localDb = {
+  getCourses(): Course[] {
+    const courses = getItem<Course[]>(STORAGE_KEYS.COURSES, [])
+    if (courses.length === 0 && localStorage.getItem(STORAGE_KEYS.INITIALIZED)) {
+      setItem(STORAGE_KEYS.COURSES, SEED_COURSES)
+      return SEED_COURSES
+    }
+    return courses
+  },
+
+  saveCourses(courses: Course[]): void {
+    setItem(STORAGE_KEYS.COURSES, courses)
+  },
+
   getTopics(): Topic[] {
     return getItem<Topic[]>(STORAGE_KEYS.TOPICS, [])
   },
@@ -106,6 +125,7 @@ export const localDb = {
   },
 
   clearAllData(): void {
+    localStorage.removeItem(STORAGE_KEYS.COURSES)
     localStorage.removeItem(STORAGE_KEYS.TOPICS)
     localStorage.removeItem(STORAGE_KEYS.CATEGORIES)
     localStorage.removeItem(STORAGE_KEYS.TAGS)

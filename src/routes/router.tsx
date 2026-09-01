@@ -14,6 +14,8 @@ import { LearningLogView } from '../components/log/LearningLogView'
 import { StatsView } from '../components/stats/StatsView'
 import { SettingsView } from '../components/settings/SettingsView'
 import { BackupView } from '../components/backup/BackupView'
+import { CoursesListView } from '../components/courses/CoursesListView'
+import { CourseDetailView } from '../components/courses/CourseDetail/CourseDetailView'
 
 // 1. Root Route with AppLayout
 const rootRoute = createRootRoute({
@@ -31,6 +33,18 @@ const todayRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/today',
   component: TodayView,
+})
+
+const coursesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/courses',
+  component: CoursesListView,
+})
+
+const courseDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/courses/$courseId',
+  component: CourseDetailView,
 })
 
 const topicsRoute = createRoute({
@@ -79,6 +93,8 @@ const backupRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   todayRoute,
+  coursesRoute,
+  courseDetailRoute,
   topicsRoute,
   topicDetailRoute,
   calendarRoute,

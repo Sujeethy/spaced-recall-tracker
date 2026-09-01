@@ -5,19 +5,30 @@ import { topicFormSchema, type TopicFormValues, type TopicWithDetails } from '..
 import { getTodayDateString } from '../../../services/spacedRecall'
 import { useCreateTopic, useUpdateTopic } from '../../../hooks/useTopics'
 import { useCategories, useCreateCategory } from '../../../hooks/useCategories'
+import { useCourses } from '../../../hooks/useCourses'
 import { SchedulePreviewTable } from './SchedulePreviewTable'
 import { QuestionBuilder } from './QuestionBuilder'
-import { Plus, Tag as TagIcon, ExternalLink } from 'lucide-react'
+import { MarkdownEditor } from '../../common/MarkdownEditor'
+import { Plus, Tag as TagIcon, ExternalLink, GraduationCap, FileText } from 'lucide-react'
 
 interface TopicFormProps {
   initialData?: TopicWithDetails
+  initialCourseId?: string
+  initialOrderIndex?: number
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export function TopicForm({ initialData, onSuccess, onCancel }: TopicFormProps) {
+export function TopicForm({
+  initialData,
+  initialCourseId,
+  initialOrderIndex,
+  onSuccess,
+  onCancel,
+}: TopicFormProps) {
   const today = getTodayDateString()
   const { data: categories = [] } = useCategories()
+  const { data: courses = [] } = useCourses()
   const createCategoryMutation = useCreateCategory()
   const createTopicMutation = useCreateTopic()
   const updateTopicMutation = useUpdateTopic()
@@ -29,20 +40,31 @@ export function TopicForm({ initialData, onSuccess, onCancel }: TopicFormProps) 
     resolver: zodResolver(topicFormSchema),
     defaultValues: {
       title: initialData?.title || '',
+      courseId: initialData?.courseId || initialCourseId || null,
+      orderIndex: initialData?.orderIndex ?? initialOrderIndex ?? 0,
       learnedAt: initialData?.learnedAt || today,
-      categoryId: initialData?.categoryId || (categories[0]?.id || ''),
+      categoryId: initialData?.categoryId || categories[0]?.id || '',
       difficulty: initialData?.difficulty || 'medium',
       chatgptUrl: initialData?.chatgptUrl || '',
       description: initialData?.description || '',
       notes: initialData?.notes || '',
+      markdownNotes: initialData?.markdownNotes || '',
       tags: initialData?.tags?.map((t) => t.name).join(', ') || '',
       questions: initialData?.questions || [],
     },
   })
 
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = form
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = form
+
   const watchedLearnedAt = watch('learnedAt')
   const watchedDifficulty = watch('difficulty')
+  const watchedMarkdown = watch('markdownNotes') || ''
 
   const fieldArray = useFieldArray({
     control: form.control,
@@ -83,22 +105,28 @@ export function TopicForm({ initialData, onSuccess, onCancel }: TopicFormProps) 
         )}
       </div>
 
-      {/* Row: Learned Date + Category */}
+      {/* Row: Course Assignment + Category */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Course Selection */}
         <div>
-          <label className="text-xs font-semibold text-foreground block mb-1">
-            Learned Date <span className="text-rose-500">*</span>
+          <label className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
+            <GraduationCap className="w-3.5 h-3.5 text-primary" />
+            <span>Course / Track</span>
           </label>
-          <input
-            type="date"
-            {...register('learnedAt')}
-            className="w-full px-3 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          {errors.learnedAt && (
-            <p className="text-[11px] text-rose-500 mt-1">{errors.learnedAt.message}</p>
-          )}
+          <select
+            {...register('courseId')}
+            className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Standalone (No Course)</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.title}
+              </option>
+            ))}
+          </select>
         </div>
 
+        {/* Category Selection */}
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-semibold text-foreground">Category</label>
@@ -130,7 +158,7 @@ export function TopicForm({ initialData, onSuccess, onCancel }: TopicFormProps) 
           ) : (
             <select
               {...register('categoryId')}
-              className="w-full px-3 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 text-xs sm:text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="" disabled>Select category</option>
               {categories.map((c) => (
@@ -143,8 +171,22 @@ export function TopicForm({ initialData, onSuccess, onCancel }: TopicFormProps) 
         </div>
       </div>
 
-      {/* Row: Difficulty + ChatGPT URL */}
+      {/* Row: Learned Date + Difficulty */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="text-xs font-semibold text-foreground block mb-1">
+            Learned Date <span className="text-rose-500">*</span>
+          </label>
+          <input
+            type="date"
+            {...register('learnedAt')}
+            className="w-full px-3 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {errors.learnedAt && (
+            <p className="text-[11px] text-rose-500 mt-1">{errors.learnedAt.message}</p>
+          )}
+        </div>
+
         <div>
           <label className="text-xs font-semibold text-foreground block mb-1.5">
             Difficulty Level
@@ -166,30 +208,31 @@ export function TopicForm({ initialData, onSuccess, onCancel }: TopicFormProps) 
             ))}
           </div>
         </div>
-
-        <div>
-          <label className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
-            <ExternalLink className="w-3 h-3 text-muted-foreground" />
-            <span>ChatGPT Conversation Link (Optional)</span>
-          </label>
-          <input
-            {...register('chatgptUrl')}
-            placeholder="https://chatgpt.com/c/..."
-            className="w-full px-3 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
       </div>
 
-      {/* Description / Summary Notes */}
+      {/* ChatGPT External Link */}
       <div>
-        <label className="text-xs font-semibold text-foreground block mb-1">
-          Key Takeaways & Core Concepts (Notes)
+        <label className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
+          <ExternalLink className="w-3 h-3 text-muted-foreground" />
+          <span>ChatGPT / Claude Conversation Link (Optional)</span>
         </label>
-        <textarea
-          {...register('notes')}
-          rows={3}
-          placeholder="Brief takeaways: formulas, architecture points, or code syntax to recall..."
-          className="w-full px-3.5 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+        <input
+          {...register('chatgptUrl')}
+          placeholder="https://chatgpt.com/c/..."
+          className="w-full px-3 py-2 text-sm border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+
+      {/* Markdown Notes (ChatGPT Response / Quick Recall Content) */}
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+          <FileText className="w-3.5 h-3.5 text-primary" />
+          <span>Markdown Quick-Recall Notes (Paste ChatGPT Output / Code / Formulas)</span>
+        </label>
+        <MarkdownEditor
+          value={watchedMarkdown}
+          onChange={(val) => setValue('markdownNotes', val)}
+          rows={6}
         />
       </div>
 

@@ -17,20 +17,34 @@ export function TopicCard({ topic }: TopicCardProps) {
   return (
     <div className="p-4 sm:p-5 rounded-2xl border bg-card hover:border-primary/40 hover:shadow-md transition-all flex flex-col justify-between">
       <div className="space-y-2.5">
-        <div className="flex items-center justify-between gap-2">
-          {topic.category ? (
-            <span
-              className="px-2 py-0.5 rounded text-[11px] font-medium"
-              style={{
-                backgroundColor: `${topic.category.color}15`,
-                color: topic.category.color,
-              }}
-            >
-              {topic.category.name}
-            </span>
-          ) : (
-            <span className="text-[11px] text-muted-foreground">General</span>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {topic.course && (
+              <span
+                className="px-2 py-0.5 rounded text-[10px] font-bold border truncate max-w-[140px]"
+                style={{
+                  backgroundColor: `${topic.course.color}15`,
+                  color: topic.course.color,
+                  borderColor: `${topic.course.color}30`,
+                }}
+              >
+                {topic.course.title}
+              </span>
+            )}
+            {topic.category ? (
+              <span
+                className="px-2 py-0.5 rounded text-[11px] font-medium"
+                style={{
+                  backgroundColor: `${topic.category.color}15`,
+                  color: topic.category.color,
+                }}
+              >
+                {topic.category.name}
+              </span>
+            ) : (
+              <span className="text-[11px] text-muted-foreground">General</span>
+            )}
+          </div>
           <DifficultyBadge difficulty={topic.difficulty} />
         </div>
 

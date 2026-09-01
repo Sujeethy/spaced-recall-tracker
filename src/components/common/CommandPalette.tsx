@@ -6,6 +6,7 @@ import { useNavigate } from '@tanstack/react-router'
 import {
   Search,
   PlusCircle,
+  GraduationCap,
   Calendar,
   Clock,
   BookOpen,
@@ -74,6 +75,13 @@ export function CommandPalette() {
               >
                 <Clock className="w-4 h-4 text-amber-500" />
                 <span>Today's Recalls</span>
+              </Command.Item>
+              <Command.Item
+                onSelect={() => handleSelect(() => navigate({ to: '/courses' }))}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer hover:bg-muted text-foreground aria-selected:bg-muted"
+              >
+                <GraduationCap className="w-4 h-4 text-blue-500" />
+                <span>Courses & Curricula</span>
               </Command.Item>
               <Command.Item
                 onSelect={() => handleSelect(() => navigate({ to: '/topics' }))}

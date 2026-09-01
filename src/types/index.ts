@@ -1,8 +1,27 @@
-﻿import { z } from 'zod'
+import { z } from 'zod'
 
 export type RecallStatus = 'upcoming' | 'due' | 'completed' | 'overdue' | 'skipped' | 'rescheduled'
 export type TopicDifficulty = 'easy' | 'medium' | 'hard'
 export type ThemeMode = 'light' | 'dark' | 'system'
+
+export interface Course {
+  id: string
+  title: string
+  description?: string
+  color: string
+  icon: string
+  status: 'active' | 'completed' | 'archived'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CourseWithDetails extends Course {
+  topicsCount: number
+  completedRecallCount: number
+  totalRecallCount: number
+  progressPercentage: number
+  nextRecallDate?: string | null
+}
 
 export interface ActiveRecallQuestion {
   id: string
@@ -15,9 +34,12 @@ export interface ActiveRecallQuestion {
 
 export interface Topic {
   id: string
+  courseId?: string | null
+  orderIndex?: number
   title: string
   description?: string
   notes?: string
+  markdownNotes?: string
   learnedAt: string // Format: YYYY-MM-DD
   categoryId: string
   difficulty: TopicDifficulty
@@ -78,6 +100,7 @@ export interface Settings {
 
 export interface TopicWithDetails extends Topic {
   category?: Category
+  course?: Course
   tags: Tag[]
   recallSessions: RecallSession[]
   nextRecallDate?: string | null
@@ -86,14 +109,27 @@ export interface TopicWithDetails extends Topic {
 }
 
 // Zod Schemas
+export const courseFormSchema = z.object({
+  title: z.string().min(1, 'Course title is required'),
+  description: z.string().optional(),
+  color: z.string().default('#6366f1'),
+  icon: z.string().default('GraduationCap'),
+  status: z.enum(['active', 'completed', 'archived']).default('active'),
+})
+
+export type CourseFormValues = z.infer<typeof courseFormSchema>
+
 export const topicFormSchema = z.object({
   title: z.string().min(1, 'Topic name is required'),
+  courseId: z.string().nullable().optional(),
+  orderIndex: z.number().optional().default(0),
   learnedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid date YYYY-MM-DD is required'),
   categoryId: z.string().min(1, 'Please select or create a category'),
   difficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
   chatgptUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   description: z.string().optional(),
   notes: z.string().optional(),
+  markdownNotes: z.string().optional(),
   tags: z.string().optional(), // comma-separated
   questions: z.array(
     z.object({
@@ -109,6 +145,7 @@ export const topicFormSchema = z.object({
 export type TopicFormValues = z.infer<typeof topicFormSchema>
 
 export interface ImportPreviewStats {
+  coursesCount?: number
   topicsCount: number
   categoriesCount: number
   tagsCount: number

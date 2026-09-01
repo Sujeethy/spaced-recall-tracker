@@ -1,9 +1,10 @@
-import type { Topic, Category, Tag, TopicTag, RecallSession, Settings, ImportPreviewStats } from '../types'
+import type { Topic, Category, Course, Tag, TopicTag, RecallSession, Settings, ImportPreviewStats } from '../types'
 import { generateRecallSessions, getTodayDateString } from './spacedRecall'
 
 export interface BackupData {
   version: string
   exportedAt: string
+  courses?: Course[]
   topics: Topic[]
   categories: Category[]
   tags: Tag[]
@@ -35,6 +36,7 @@ export function validateBackupData(data: unknown): { valid: boolean; error?: str
   return {
     valid: true,
     stats: {
+      coursesCount: Array.isArray(backup.courses) ? backup.courses.length : 0,
       topicsCount: backup.topics.length,
       categoriesCount: backup.categories.length,
       tagsCount: Array.isArray(backup.tags) ? backup.tags.length : 0,

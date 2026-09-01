@@ -1,7 +1,7 @@
-import { LucideIcon } from 'lucide-react'
+import { LucideIcon, Inbox } from 'lucide-react'
 
 interface EmptyStateProps {
-  icon: LucideIcon
+  icon?: LucideIcon
   title: string
   description: string
   actionLabel?: string
@@ -9,7 +9,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  icon: Icon,
+  icon: Icon = Inbox,
   title,
   description,
   actionLabel,

@@ -5,7 +5,20 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
--- 1. CATEGORIES
+-- 1. COURSES
+create table if not exists public.courses (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid references auth.users(id) on delete cascade default auth.uid(),
+    title text not null,
+    description text default '',
+    color text default '#6366f1',
+    icon text default 'GraduationCap',
+    status text check (status in ('active', 'completed', 'archived')) default 'active',
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 2. CATEGORIES
 create table if not exists public.categories (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid references auth.users(id) on delete cascade default auth.uid(),
@@ -17,7 +30,7 @@ create table if not exists public.categories (
     unique (user_id, name)
 );
 
--- 2. TAGS
+-- 3. TAGS
 create table if not exists public.tags (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid references auth.users(id) on delete cascade default auth.uid(),
@@ -25,13 +38,16 @@ create table if not exists public.tags (
     unique (user_id, name)
 );
 
--- 3. TOPICS
+-- 4. TOPICS
 create table if not exists public.topics (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid references auth.users(id) on delete cascade default auth.uid(),
+    course_id uuid references public.courses(id) on delete set null,
+    order_index integer default 0,
     title text not null,
     description text default '',
     notes text default '',
+    markdown_notes text default '',
     learned_at date not null default current_date,
     category_id uuid references public.categories(id) on delete set null,
     difficulty text check (difficulty in ('easy', 'medium', 'hard')) default 'medium',

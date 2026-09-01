@@ -1,6 +1,9 @@
 import type {
   Topic,
   Category,
+  Course,
+  CourseWithDetails,
+  CourseFormValues,
   Tag,
   TopicTag,
   RecallSession,
@@ -22,6 +25,112 @@ import type { BackupData } from '../services/exportImport'
  * Seamlessly interfaces with Supabase when configured, or localDb when offline/local-first.
  */
 export const api = {
+  // -------------------------------------------------------------
+  // Courses
+  // -------------------------------------------------------------
+  async getCourses(): Promise<CourseWithDetails[]> {
+    const supabase = getSupabaseClient()
+    if (supabase) {
+      try {
+        const { data: coursesData, error } = await supabase
+          .from('courses')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (!error && coursesData) {
+          const topics = await this.getTopics()
+          return coursesData.map(c => enrichCourse(c, topics))
+        }
+      } catch (err) {
+        console.warn('Supabase query for courses failed, falling back to localDb:', err)
+      }
+    }
+
+    const courses = localDb.getCourses()
+    const topics = await this.getTopics()
+    return courses.map(c => enrichCourse(c, topics))
+  },
+
+  async getCourseById(id: string): Promise<CourseWithDetails | null> {
+    const courses = await this.getCourses()
+    return courses.find(c => c.id === id) || null
+  },
+
+  async createCourse(values: CourseFormValues): Promise<CourseWithDetails> {
+    const nowIso = new Date().toISOString()
+    const courseId = crypto.randomUUID()
+
+    const newCourse: Course = {
+      id: courseId,
+      title: values.title.trim(),
+      description: values.description?.trim() || '',
+      color: values.color || '#6366f1',
+      icon: values.icon || 'GraduationCap',
+      status: values.status || 'active',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    }
+
+    const currentCourses = localDb.getCourses()
+    localDb.saveCourses([newCourse, ...currentCourses])
+
+    return (await this.getCourseById(courseId))!
+  },
+
+  async updateCourse(id: string, values: Partial<CourseFormValues>): Promise<CourseWithDetails> {
+    const courses = localDb.getCourses()
+    const idx = courses.findIndex(c => c.id === id)
+    if (idx === -1) throw new Error(`Course not found: ${id}`)
+
+    const current = courses[idx]
+    const updated: Course = {
+      ...current,
+      title: values.title !== undefined ? values.title.trim() : current.title,
+      description: values.description !== undefined ? values.description?.trim() : current.description,
+      color: values.color !== undefined ? values.color : current.color,
+      icon: values.icon !== undefined ? values.icon : current.icon,
+      status: values.status !== undefined ? values.status : current.status,
+      updatedAt: new Date().toISOString(),
+    }
+
+    courses[idx] = updated
+    localDb.saveCourses(courses)
+
+    return (await this.getCourseById(id))!
+  },
+
+  async deleteCourse(id: string, deleteTopics: boolean = false): Promise<void> {
+    const courses = localDb.getCourses().filter(c => c.id !== id)
+    localDb.saveCourses(courses)
+
+    const topics = localDb.getTopics()
+    if (deleteTopics) {
+      // Cascade delete topics belonging to this course
+      const topicsToDelete = topics.filter(t => t.courseId === id)
+      for (const t of topicsToDelete) {
+        await this.deleteTopic(t.id)
+      }
+    } else {
+      // Unassign course from topics
+      const updatedTopics = topics.map(t => (t.courseId === id ? { ...t, courseId: null } : t))
+      localDb.saveTopics(updatedTopics)
+    }
+  },
+
+  async reorderTopicsInCourse(courseId: string, orderedTopicIds: string[]): Promise<void> {
+    const topics = localDb.getTopics()
+    const updatedTopics = topics.map(t => {
+      if (t.courseId === courseId) {
+        const order = orderedTopicIds.indexOf(t.id)
+        if (order !== -1) {
+          return { ...t, orderIndex: order, updatedAt: new Date().toISOString() }
+        }
+      }
+      return t
+    })
+    localDb.saveTopics(updatedTopics)
+  },
+
   // -------------------------------------------------------------
   // Topics
   // -------------------------------------------------------------
@@ -65,9 +174,12 @@ export const api = {
 
     const newTopic: Topic = {
       id: topicId,
+      courseId: values.courseId || null,
+      orderIndex: values.orderIndex !== undefined ? values.orderIndex : 0,
       title: values.title.trim(),
       description: values.description?.trim() || '',
       notes: values.notes?.trim() || '',
+      markdownNotes: values.markdownNotes?.trim() || '',
       learnedAt: values.learnedAt || today,
       categoryId: values.categoryId,
       difficulty: values.difficulty || 'medium',
@@ -122,8 +234,11 @@ export const api = {
     const updated: Topic = {
       ...current,
       title: values.title !== undefined ? values.title.trim() : current.title,
+      courseId: values.courseId !== undefined ? values.courseId : current.courseId,
+      orderIndex: values.orderIndex !== undefined ? values.orderIndex : current.orderIndex,
       description: values.description !== undefined ? values.description : current.description,
       notes: values.notes !== undefined ? values.notes : current.notes,
+      markdownNotes: values.markdownNotes !== undefined ? values.markdownNotes : current.markdownNotes,
       learnedAt: values.learnedAt !== undefined ? values.learnedAt : current.learnedAt,
       categoryId: values.categoryId !== undefined ? values.categoryId : current.categoryId,
       difficulty: values.difficulty !== undefined ? values.difficulty : current.difficulty,
@@ -282,6 +397,7 @@ export const api = {
     return {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
+      courses: localDb.getCourses(),
       topics: localDb.getTopics(),
       categories: localDb.getCategories(),
       tags: localDb.getTags(),
@@ -293,6 +409,7 @@ export const api = {
 
   async restoreBackup(backup: BackupData, mode: 'replace' | 'merge'): Promise<void> {
     if (mode === 'replace') {
+      if (backup.courses) localDb.saveCourses(backup.courses)
       localDb.saveTopics(backup.topics)
       localDb.saveCategories(backup.categories)
       localDb.saveTags(backup.tags || [])
@@ -301,6 +418,13 @@ export const api = {
       if (backup.settings) localDb.saveSettings(backup.settings)
     } else {
       // Merge mode
+      if (backup.courses) {
+        const curCourses = localDb.getCourses()
+        const courseMap = new Map(curCourses.map(c => [c.id, c]))
+        backup.courses.forEach(c => courseMap.set(c.id, c))
+        localDb.saveCourses(Array.from(courseMap.values()))
+      }
+
       const curTopics = localDb.getTopics()
       const curCategories = localDb.getCategories()
       const curTags = localDb.getTags()
@@ -329,6 +453,29 @@ export const api = {
 // -------------------------------------------------------------
 // Helper enrichment functions
 // -------------------------------------------------------------
+function enrichCourse(course: Course, topics: TopicWithDetails[]): CourseWithDetails {
+  const courseTopics = topics.filter(t => t.courseId === course.id)
+  const totalRecalls = courseTopics.reduce((acc, t) => acc + t.totalRecallCount, 0)
+  const completedRecalls = courseTopics.reduce((acc, t) => acc + t.completedRecallCount, 0)
+  const progressPercentage = totalRecalls === 0 ? 0 : Math.round((completedRecalls / totalRecalls) * 100)
+
+  // Find earliest upcoming/due recall date
+  const nextDates = courseTopics
+    .map(t => t.nextRecallDate)
+    .filter((d): d is string => Boolean(d))
+    .sort()
+  const nextRecallDate = nextDates[0] || null
+
+  return {
+    ...course,
+    topicsCount: courseTopics.length,
+    completedRecallCount: completedRecalls,
+    totalRecallCount: totalRecalls,
+    progressPercentage,
+    nextRecallDate,
+  }
+}
+
 function enrichTopic(
   topic: Topic,
   categories: Category[],
@@ -337,6 +484,7 @@ function enrichTopic(
   sessions: RecallSession[]
 ): TopicWithDetails {
   const category = categories.find(c => c.id === topic.categoryId)
+  const course = topic.courseId ? localDb.getCourses().find(c => c.id === topic.courseId) : undefined
   const matchingTagIds = topicTags.filter(tt => tt.topicId === topic.id).map(tt => tt.tagId)
   const matchingTags = tags.filter(t => matchingTagIds.includes(t.id))
   const topicSessions = sessions
@@ -349,6 +497,7 @@ function enrichTopic(
   return {
     ...topic,
     category,
+    course,
     tags: matchingTags,
     recallSessions: topicSessions,
     nextRecallDate: nextSession ? nextSession.scheduledDate : null,

@@ -2,6 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import {
   LayoutDashboard,
   Clock,
+  GraduationCap,
   BookOpen,
   Calendar,
   Settings,
@@ -13,6 +14,7 @@ import clsx from 'clsx'
 const MOBILE_ITEMS = [
   { to: '/', label: 'Home', icon: LayoutDashboard },
   { to: '/today', label: 'Today', icon: Clock, showBadge: true },
+  { to: '/courses', label: 'Courses', icon: GraduationCap },
   { to: '/topics', label: 'Topics', icon: BookOpen },
   { to: '/calendar', label: 'Calendar', icon: Calendar },
   { to: '/settings', label: 'Settings', icon: Settings },

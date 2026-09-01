@@ -53,8 +53,10 @@ export function CsvImportCard() {
 
           await api.createTopic({
             title: topic.title,
+            orderIndex: 0,
             description: topic.description || '',
             notes: topic.notes || '',
+            markdownNotes: '',
             learnedAt: topic.learnedAt || new Date().toISOString().slice(0, 10),
             categoryId: category.id,
             difficulty: topic.difficulty || 'medium',
